@@ -1,4 +1,4 @@
-# Git Commit Conventions - HSF302 Project
+# Git Commit Conventions - MSS301 Project
 
 Quy ước commit message theo chuẩn Conventional Commits 1.0.0 — chuẩn industry-wide, được Angular, Vue, NestJS, GitHub CLI, và nhiều project lớn dùng.
 Tham khảo: [https://www.conventionalcommits.org/](https://www.conventionalcommits.org/)
