@@ -19,16 +19,17 @@ public class OrderService {
     private final InventoryClient inventoryClient;
 
     public void placeOrder(OrderRequest orderRequest) {
+        // 1. Goi dong bo sang Inventory Service
         boolean inStock = inventoryClient.isInStock(
-                orderRequest.skuCode(),
-                orderRequest.quantity());
+                orderRequest.skuCode(), orderRequest.quantity());
 
+        // 2. Con hang -> luu don; het hang -> nem exception
         if (inStock) {
-            var order = mapToOrder(orderRequest);
+            Order order = mapToOrder(orderRequest);
             orderRepository.save(order);
         } else {
             throw new RuntimeException(
-                    "Product with Skucode " + orderRequest.skuCode() + " is not in stock");
+                    "Product with SkuCode " + orderRequest.skuCode() + " is not in stock");
         }
     }
 
