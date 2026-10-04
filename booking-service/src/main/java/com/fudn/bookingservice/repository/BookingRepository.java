@@ -7,4 +7,10 @@ import java.util.List;
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByCustomerIdOrderByBookingDateDesc(Long customerId);
     List<Booking> findAllByOrderByBookingDateDesc();
+    
+    List<Booking> findByBookingStatusAndBookingDateBetweenOrderByBookingDateDesc(
+        com.fudn.bookingservice.model.BookingStatus status,
+        java.time.LocalDateTime startDate,
+        java.time.LocalDateTime endDate
+    );
 }
