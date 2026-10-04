@@ -148,4 +148,15 @@ public class BookingService {
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
+    private Booking findAccessible(Long id, Long userId, String role) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+        if (!"ROLE_ADMIN".equals(role) && !booking.getCustomerId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied (BR11)");
+        }
+        return booking;
+    }
+    public BookingResponse getById(Long id, Long userId, String role) {
+        return mapToResponse(findAccessible(id, userId, role));
+    }
 }
