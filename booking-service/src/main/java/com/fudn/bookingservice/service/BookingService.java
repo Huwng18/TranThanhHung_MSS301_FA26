@@ -6,6 +6,8 @@ import com.fudn.bookingservice.dto.BookingDetailResponse;
 import com.fudn.bookingservice.dto.BookingRequest;
 import com.fudn.bookingservice.dto.BookingResponse;
 import com.fudn.bookingservice.dto.SeatMapResponse;
+import com.fudn.bookingservice.dto.ReportResponse;
+import com.fudn.bookingservice.dto.RevenueByMovie;
 import com.fudn.bookingservice.model.Booking;
 import com.fudn.bookingservice.model.BookingDetail;
 import com.fudn.bookingservice.model.BookingStatus;
@@ -18,6 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -184,5 +188,50 @@ public class BookingService {
 
         booking.setBookingStatus(BookingStatus.CANCELLED);
         return mapToResponse(bookingRepository.save(booking));
+    }
+    public ReportResponse report(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate and endDate are required");
+        }
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date must be before or equal to end date (BR13)");
+        }
+        LocalDateTime startOfDay = startDate.atStartOfDay();
+        LocalDateTime endOfDay = endDate.atTime(LocalTime.MAX);
+
+        List<Booking> bookings = bookingRepository.findByBookingStatusAndBookingDateBetweenOrderByBookingDateDesc(
+                BookingStatus.CONFIRMED, startOfDay, endOfDay);
+
+        int totalBookings = bookings.size();
+        int totalTickets = 0;
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        Map<String, RevenueByMovie> movieStats = new HashMap<>();
+
+        for (Booking booking : bookings) {
+            totalRevenue = totalRevenue.add(booking.getTotalPrice());
+            totalTickets += booking.getDetails().size();
+            for (BookingDetail detail : booking.getDetails()) {
+                String movieId = detail.getMovieId();
+                RevenueByMovie stat = movieStats.computeIfAbsent(movieId, k -> RevenueByMovie.builder()
+                        .movieId(movieId)
+                        .movieTitle(detail.getMovieTitle())
+                        .ticketsSold(0)
+                        .revenue(BigDecimal.ZERO)
+                        .build());
+                stat.setTicketsSold(stat.getTicketsSold() + 1);
+                stat.setRevenue(stat.getRevenue().add(detail.getTicketPrice()));
+            }
+        }
+
+        List<RevenueByMovie> sortedMovieStats = movieStats.values().stream()
+                .sorted((a, b) -> b.getRevenue().compareTo(a.getRevenue()))
+                .collect(Collectors.toList());
+
+        return ReportResponse.builder()
+                .totalBookings(totalBookings)
+                .totalTickets(totalTickets)
+                .totalRevenue(totalRevenue)
+                .revenueByMovie(sortedMovieStats)
+                .build();
     }
 }
