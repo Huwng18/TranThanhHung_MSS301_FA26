@@ -1,0 +1,6 @@
+docker/
+target/
+*.jar
+.idea/
+*.iml
+.vscode/
