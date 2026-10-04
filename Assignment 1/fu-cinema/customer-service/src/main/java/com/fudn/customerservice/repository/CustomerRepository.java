@@ -1,0 +1,13 @@
+package com.fudn.customerservice.repository;
+
+import com.fudn.customerservice.model.Customer;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+
+public interface CustomerRepository extends JpaRepository<Customer, Long> {
+    Optional<Customer> findByEmail(String email);
+    boolean existsByEmail(String email);
+    
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM Customer c WHERE LOWER(c.customerName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    java.util.List<Customer> search(@org.springframework.data.repository.query.Param("keyword") String keyword);
+}

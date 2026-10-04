@@ -1,0 +1,551 @@
+{
+  "info": {
+    "name": "FUCinema API Test",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Admin Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "var data = pm.response.json();",
+              "pm.environment.set('adminToken', data.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"admin@fucinema.com\",\n    \"password\": \"@@abc123@@\"\n}"
+        },
+        "url": {
+          "raw": "{{gateway}}/api/auth/login",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Register Customer",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('randomEmail', 'cust_' + Date.now() + '@example.com');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"customerName\": \"Test Customer\",\n    \"telephone\": \"0123456789\",\n    \"customerBirthday\": \"2000-01-01\",\n    \"email\": \"{{randomEmail}}\",\n    \"password\": \"Password@123\"\n}"
+        },
+        "url": {
+          "raw": "{{gateway}}/api/auth/register",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Customer Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "var data = pm.response.json();",
+              "pm.environment.set('customerToken', data.token);",
+              "pm.environment.set('customerId', data.customerId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"{{randomEmail}}\",\n    \"password\": \"Password@123\"\n}"
+        },
+        "url": {
+          "raw": "{{gateway}}/api/auth/login",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Create Genre",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('randomGenre', 'Action_' + Date.now());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+              "var data = pm.response.json();",
+              "pm.environment.set('genreId', data.genreId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"genreName\": \"{{randomGenre}}\",\n    \"description\": \"Action movies\"\n}"
+        },
+        "url": {
+          "raw": "{{gateway}}/api/genres",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "genres"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Create Room",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('randomRoom', 'Room_' + Date.now());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+              "var data = pm.response.json();",
+              "pm.environment.set('roomId', data.roomId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"roomName\": \"{{randomRoom}}\",\n    \"seatRows\": 10,\n    \"seatsPerRow\": 10\n}"
+        },
+        "url": {
+          "raw": "{{gateway}}/api/rooms",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "rooms"
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Create Movie",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+              "var data = pm.response.json();",
+              "pm.environment.set('movieId', data.movieId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"title\": \"Avenger {{$randomInt}}\",\n    \"director\": \"Russo Brothers\",\n    \"releaseDate\": \"2026-05-01\",\n    \"durationMinutes\": 120,\n    \"genreId\": \"{{genreId}}\",\n    \"ageRating\": \"PG_13\",\n    \"language\": \"EN\"\n}"
+        },
+        "url": {
+          "raw": "{{gateway}}/api/movies",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "movies"
+          ]
+        }
+      }
+    },
+    {
+      "name": "7. Create Showtime",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var tmr = new Date(); tmr.setDate(tmr.getDate() + 1);",
+              "pm.environment.set('tomorrow', tmr.toISOString().slice(0, 19));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+              "var data = pm.response.json();",
+              "pm.environment.set('showtimeId', data.showtimeId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"movieId\": \"{{movieId}}\",\n    \"roomId\": \"{{roomId}}\",\n    \"startTime\": \"{{tomorrow}}\",\n    \"ticketPrice\": 50000\n}"
+        },
+        "url": {
+          "raw": "{{gateway}}/api/showtimes",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "showtimes"
+          ]
+        }
+      }
+    },
+    {
+      "name": "8. Create Booking",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+              "var data = pm.response.json();",
+              "pm.environment.set('bookingId', data.bookingId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{customerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"items\": [\n        {\n            \"showtimeId\": \"{{showtimeId}}\",\n            \"seatCode\": \"A1\"\n        }\n    ]\n}"
+        },
+        "url": {
+          "raw": "{{gateway}}/api/bookings",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "bookings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "9. Get My Bookings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "var data = pm.response.json();",
+              "pm.test('Has at least one booking', function () { pm.expect(data.length).to.be.above(0); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{customerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{gateway}}/api/bookings/my",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "bookings",
+            "my"
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Cancel Booking",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "var data = pm.response.json();",
+              "pm.test('Status is CANCELLED', function () { pm.expect(data.bookingStatus).to.eql('CANCELLED'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{customerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{gateway}}/api/bookings/{{bookingId}}/cancel",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "bookings",
+            "{{bookingId}}",
+            "cancel"
+          ]
+        }
+      }
+    },
+    {
+      "name": "11. Admin Report",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var today = new Date().toISOString().split('T')[0];",
+              "pm.environment.set('todayDate', today);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{gateway}}/api/bookings/report?startDate={{todayDate}}&endDate={{todayDate}}",
+          "host": [
+            "{{gateway}}"
+          ],
+          "path": [
+            "api",
+            "bookings",
+            "report"
+          ],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "{{todayDate}}"
+            },
+            {
+              "key": "endDate",
+              "value": "{{todayDate}}"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
