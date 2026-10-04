@@ -88,7 +88,6 @@ public class BookingService {
             ShowtimeResponse showtime = cache.get(showtimeId);
             List<String> bookedSeats = bookedCache.get(showtimeId);
             
-            // Check BR08: duplicate in request
             long countInReq = request.getItems().stream()
                 .filter(i -> i.getShowtimeId().equals(showtimeId) && i.getSeatCode().equals(seatCode))
                 .count();
@@ -96,19 +95,16 @@ public class BookingService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate seat in request: " + seatCode);
             }
 
-            // Check BR08: already booked
             if (bookedSeats.contains(seatCode)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Seat already taken: " + seatCode);
             }
 
-            // Check BR08: outside layout
             int rowNumber = seatCode.charAt(0) - 'A' + 1;
             int colNumber = Integer.parseInt(seatCode.substring(1));
             if (rowNumber > showtime.getSeatRows() || colNumber > showtime.getSeatsPerRow()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seat outside layout: " + seatCode);
             }
 
-            // Snapshot BR10
             BookingDetail detail = BookingDetail.builder()
                     .showtimeId(showtimeId)
                     .movieId(showtime.getMovieId())
@@ -120,13 +116,16 @@ public class BookingService {
             booking.addDetail(detail);
 
             total = total.add(showtime.getTicketPrice());
-            bookedSeats.add(seatCode); // Prevent duplicates across request items
+            bookedSeats.add(seatCode);
         }
 
         booking.setTotalPrice(total);
         Booking saved = bookingRepository.save(booking);
+        return mapToResponse(saved);
+    }
 
-        List<BookingDetailResponse> resDetails = saved.getDetails().stream().map(d -> BookingDetailResponse.builder()
+    private BookingResponse mapToResponse(Booking booking) {
+        List<BookingDetailResponse> resDetails = booking.getDetails().stream().map(d -> BookingDetailResponse.builder()
                 .showtimeId(d.getShowtimeId())
                 .movieId(d.getMovieId())
                 .movieTitle(d.getMovieTitle())
@@ -136,12 +135,17 @@ public class BookingService {
                 .build()).collect(Collectors.toList());
 
         return BookingResponse.builder()
-                .bookingId(saved.getBookingId())
-                .customerId(saved.getCustomerId())
-                .bookingDate(saved.getBookingDate())
-                .totalPrice(saved.getTotalPrice())
-                .bookingStatus(saved.getBookingStatus().name())
+                .bookingId(booking.getBookingId())
+                .customerId(booking.getCustomerId())
+                .bookingDate(booking.getBookingDate())
+                .totalPrice(booking.getTotalPrice())
+                .bookingStatus(booking.getBookingStatus().name())
                 .details(resDetails)
                 .build();
+    }
+    public List<BookingResponse> getMyBookings(Long customerId) {
+        return bookingRepository.findByCustomerIdOrderByBookingDateDesc(customerId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 }
