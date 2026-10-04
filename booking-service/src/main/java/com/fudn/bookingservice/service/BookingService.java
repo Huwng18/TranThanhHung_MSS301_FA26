@@ -159,4 +159,25 @@ public class BookingService {
     public BookingResponse getById(Long id, Long userId, String role) {
         return mapToResponse(findAccessible(id, userId, role));
     }
+    @Transactional
+    public BookingResponse cancel(Long id, Long userId, String role) {
+        Booking booking = findAccessible(id, userId, role);
+        if (booking.getBookingStatus() != BookingStatus.CONFIRMED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only CONFIRMED bookings can be cancelled");
+        }
+
+        if (!booking.getDetails().isEmpty()) {
+            String showtimeId = booking.getDetails().get(0).getShowtimeId();
+            try {
+                ShowtimeResponse showtime = movieClient.getShowtimeById(showtimeId);
+                if (showtime != null && LocalDateTime.now().plusHours(2).isAfter(showtime.getStartTime())) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot cancel within 2 hours of showtime (BR12)");
+                }
+            } catch (Exception e) {
+            }
+        }
+
+        booking.setBookingStatus(BookingStatus.CANCELLED);
+        return mapToResponse(bookingRepository.save(booking));
+    }
 }
