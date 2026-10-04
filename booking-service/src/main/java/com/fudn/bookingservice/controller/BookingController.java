@@ -8,6 +8,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
+import com.fudn.bookingservice.dto.ReportResponse;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -29,5 +32,14 @@ public class BookingController {
     public ResponseEntity<SeatMapResponse> getSeatMap(@PathVariable String id) {
         return ResponseEntity.ok(bookingService.getSeatMap(id));
     }
+    @GetMapping("/report")
+    public ResponseEntity<ReportResponse> getReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestHeader("X-User-Role") String role) {
+        if (!"ROLE_ADMIN".equals(role)) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        return ResponseEntity.ok(bookingService.report(startDate, endDate));
+    }
 }
-
