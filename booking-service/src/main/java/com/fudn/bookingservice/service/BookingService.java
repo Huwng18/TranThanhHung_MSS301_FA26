@@ -35,6 +35,24 @@ public class BookingService {
         this.movieClient = movieClient;
     }
 
+    public SeatMapResponse getSeatMap(String showtimeId) {
+        ShowtimeResponse showtime = movieClient.getShowtimeById(showtimeId);
+        if (showtime == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Showtime not found");
+        }
+        List<String> bookedSeats = detailRepository.findByShowtimeId(showtimeId).stream()
+                .filter(d -> d.getBooking().getBookingStatus() == BookingStatus.CONFIRMED)
+                .map(BookingDetail::getSeatCode)
+                .collect(Collectors.toList());
+
+        return SeatMapResponse.builder()
+                .showtimeId(showtimeId)
+                .seatRows(showtime.getSeatRows())
+                .seatsPerRow(showtime.getSeatsPerRow())
+                .bookedSeats(bookedSeats)
+                .build();
+    }
+
     @Transactional
     public BookingResponse createBooking(Long customerId, BookingRequest request) {
         Map<String, ShowtimeResponse> cache = new HashMap<>();
@@ -127,4 +145,3 @@ public class BookingService {
                 .build();
     }
 }
-
