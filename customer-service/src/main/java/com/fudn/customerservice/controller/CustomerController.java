@@ -22,10 +22,7 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<CustomerResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return new ResponseEntity<>(customerService.register(request), HttpStatus.CREATED);
-    }
+
 
     @GetMapping("/me")
     public ResponseEntity<CustomerResponse> getProfile(@RequestHeader("X-User-Id") Long customerId) {
