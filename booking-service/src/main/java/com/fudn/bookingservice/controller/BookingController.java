@@ -30,3 +30,4 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getSeatMap(id));
     }
 }
+

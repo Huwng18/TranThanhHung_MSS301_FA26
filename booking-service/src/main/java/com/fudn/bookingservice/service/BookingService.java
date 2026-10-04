@@ -148,6 +148,11 @@ public class BookingService {
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
+    public List<BookingResponse> getAllBookings() {
+        return bookingRepository.findAllByOrderByBookingDateDesc().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
     private Booking findAccessible(Long id, Long userId, String role) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
