@@ -42,4 +42,17 @@ public class BookingController {
         }
         return ResponseEntity.ok(bookingService.report(startDate, endDate));
     }
+
+    @GetMapping("/my")
+    public ResponseEntity<java.util.List<BookingResponse>> getMyBookings(@RequestHeader("X-User-Id") Long customerId) {
+        return ResponseEntity.ok(bookingService.getMyBookings(customerId));
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<BookingResponse> cancelBooking(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long customerId,
+            @RequestHeader(value = "X-User-Role", defaultValue = "ROLE_USER") String role) {
+        return ResponseEntity.ok(bookingService.cancel(id, customerId, role));
+    }
 }
