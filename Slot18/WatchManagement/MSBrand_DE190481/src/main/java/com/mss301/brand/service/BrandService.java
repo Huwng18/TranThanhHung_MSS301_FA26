@@ -1,17 +1,22 @@
 package com.mss301.brand.service;
 
 import com.mss301.brand.dto.AssignmentResponse;
+import com.mss301.brand.dto.BrandResponse;
+import com.mss301.brand.dto.BrandWatchesResponse;
 import com.mss301.brand.entity.BrandWatch;
+import com.mss301.brand.entity.WatchBrand;
 import com.mss301.brand.repository.BrandRepository;
 import com.mss301.brand.repository.BrandWatchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -52,4 +57,38 @@ public class BrandService {
         return new AssignmentResponse(watchId, null, previous, "UNASSIGNED");
     }
 
+    // [TODO-5.5] Stable ordering makes seed data and Saga verification easy to inspect.
+    @Transactional(readOnly = true)
+    public List<BrandResponse> findAll() {
+        return brandRepository.findAll(Sort.by("brandId")).stream()
+            .map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public BrandResponse findById(Integer id) {
+        return toResponse(getBrand(id));
+    }
+
+    @Transactional(readOnly = true)
+    public BrandWatchesResponse watchesOf(Integer brandId) {
+        WatchBrand brand = getBrand(brandId);
+        List<Integer> watchIds = brandWatchRepository.findByBrandIdOrderByWatchIdAsc(brandId)
+            .stream().map(BrandWatch::getWatchId).toList();
+        return new BrandWatchesResponse(brandId, brand.getBrandName(), watchIds.size(), watchIds);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsById(Integer id) {
+        return brandRepository.existsById(id);
+    }
+
+    private WatchBrand getBrand(Integer id) {
+        return brandRepository.findById(id).orElseThrow(() ->
+            new ResponseStatusException(HttpStatus.NOT_FOUND, "Brand not found with id: " + id));
+    }
+
+    private BrandResponse toResponse(WatchBrand brand) {
+        return new BrandResponse(brand.getBrandId(), brand.getBrandName(),
+            brand.getCountryOfOrigin(), brandWatchRepository.countByBrandId(brand.getBrandId()));
+    }
 }
