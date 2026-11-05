@@ -1,12 +1,14 @@
 # Slot18 Git history
 
-<!-- [TODO-0.3] Preserve per-TODO commits and the requested author identity. -->
+<!-- [TODO-0.3] Preserve the requested author and the per-TODO source history. -->
 
-The nested repository was imported into `TranThanhHung_MSS301_FA26/main` under `Slot18/WatchManagement`. Its 79 original commits and merge topology were retained. As requested, the local Slot18 history now uses author and committer `Huwng18 <hungthanh18122005@gmail.com>`. Commit messages, timestamps and file trees were preserved while the identity and parent hashes changed. Earlier assignments, remote-tracking refs and the Assignment 01 `v1.0.0` tag were left unchanged.
+The nested source repository was imported into `TranThanhHung_MSS301_FA26/main` under `Slot18/WatchManagement`. Author and committer use `Huwng18 <hungthanh18122005@gmail.com>`. Source changes remain separate by TODO and feature merges are preserved.
 
-The original history and removed report files remain available in local backups under the parent `.git` directory. No backup is part of the submitted source tree. TODO-9 now ships only `WatchManagement_Saga.postman_collection.json`; generated HTML, PNG, JSON reports and helper tools were removed in a separate TODO-9.1 commit.
+At the user's request, all36removed report/helper paths were filtered from every local Slot18 branch and the Slot18 release tag. Six commits containing only those files became empty and were pruned. The current source tree and Postman JSON bytes remained unchanged during filtering. Earlier assignments, remote-tracking refs and the Assignment01 `v1.0.0` tag were left unchanged.
 
-GitHub Desktop uses the parent repository. Existing source changes remain separate per TODO; feature branches use the `slot18/` prefix. This table maps original nested commits to their current equivalents on the parent history.
+Backups are stored locally under the parent `.git` directory and are outside the submitted source tree and normal branch/tag history. TODO9 ships only `WatchManagement_Saga.postman_collection.json`; the file contains its own requests, variables and test scripts.
+
+This table maps the79original nested commits to the remaining parent history. Rows marked removed were report/helper-only commits.
 
 | Original nested commit | Current commit (Huwng18) |
 |---|---|
@@ -77,15 +79,15 @@ GitHub Desktop uses the parent repository. Existing source changes remain separa
 | `743ef09` | `33bb8a8` |
 | `d1dc989` | `f49f4b9` |
 | `f6dda10` | `c59e5a4` |
-| `245d3fb` | `89b5906` |
-| `d07d859` | `7ba47ad` |
-| `ae51581` | `23012d6` |
-| `defe905` | `4714ccd` |
-| `86c26a5` | `72cf4f9` |
-| `5591f9c` | `07ed58b` |
-| `aa9199b` | `c733058` |
-| `28db825` | `b9d18ff` |
-| `132ed6f` | `0e2d199` |
-| `2aa8dac` | `339a09c` |
-| `d93129f` | `fec78f8` |
-| `3b90418` | `0905850` |
+| `245d3fb` | `8bddbd1` |
+| `d07d859` | removed: report/helper-only commit |
+| `ae51581` | removed: report/helper-only commit |
+| `defe905` | removed: report/helper-only commit |
+| `86c26a5` | removed: report/helper-only commit |
+| `5591f9c` | `4915c53` |
+| `aa9199b` | `7f52c0a` |
+| `28db825` | removed: report/helper-only commit |
+| `132ed6f` | removed: report/helper-only commit |
+| `2aa8dac` | `8e5de49` |
+| `d93129f` | `bda459f` |
+| `3b90418` | `079ed1d` |

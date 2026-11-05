@@ -4,6 +4,8 @@
 
 Repository: `TranThanhHung_MSS301_FA26`, nhánh `main`; mã nguồn ở `Slot18/WatchManagement`. Tác giả commit của Slot18 được thống nhất thành `Huwng18 <hungthanh18122005@gmail.com>`. Lịch sử giữ riêng từng thay đổi TODO; một TODO có thể có commit triển khai và commit kiểm thử riêng. Các nhánh tính năng được merge `--no-ff`.
 
+History cleanup removed 36 report/helper paths and pruned six report-only commits; the references below point to the filtered history.
+
 Theo yêu cầu hiện tại của bạn, **TODO-9 chỉ bàn giao một file [WatchManagement_Saga.postman_collection.json](../WatchManagement_Saga.postman_collection.json)** có đầy đủ request, biến và script kiểm thử để import vào Postman. Các yêu cầu báo cáo/ảnh/script riêng thuộc TODO-9.2–9.5 trong tài liệu gốc được thay bằng phạm vi này. Hướng dẫn chạy collection nằm trong [README](../README.md).
 
 Các giới hạn về read timeout và recovery của Saga được ghi trong README.
@@ -56,13 +58,13 @@ Các giới hạn về read timeout và recovery của Saga được ghi trong R
 | TODO-7.4 | Public chỉ gồm login, refresh, fallback và **`GET /api/watches`** | `41d5497` |
 | TODO-7.5 | Verify chữ ký + hạn JWT; từ chối token có `type != access`; gắn `X-User-Id`, `X-User-Role` | `ce76653` |
 | TODO-7.6 | TimeLimiter `15s` cho accountCB/brandCB/watchCB | `e419fc4` |
-| TODO-8.1 | Chạy đúng thứ tự MSAccount → MSBrand → MSWatch → APIGateway | `c733058` |
-| TODO-8.2 | Smoke test qua Gateway: login, list watches, list brands | `b9d18ff` |
-| TODO-9.1 | M?t JSON t? ch?a to?n b? request, bi?n v? script ki?m th? Postman | `b2d65e0` |
+| TODO-8.1 | Chạy đúng thứ tự MSAccount → MSBrand → MSWatch → APIGateway | `7f52c0a` |
+| TODO-8.2 | Smoke test qua Gateway: login, list watches, list brands | — (kiểm tra trực tiếp bằng collection Postman) |
+| TODO-9.1 | M?t JSON t? ch?a to?n b? request, bi?n v? script ki?m th? Postman | `d62dffc` |
 | TODO-9.2 | Báo cáo/ảnh riêng được bỏ theo yêu cầu hiện tại; xem phạm vi TODO-9.1 | — |
 | TODO-9.3 | Script lỗi hạ tầng riêng được bỏ theo yêu cầu hiện tại; xem phạm vi TODO-9.1 | — |
 | TODO-9.4 | Script compensation failure riêng được bỏ theo yêu cầu hiện tại; xem phạm vi TODO-9.1 | — |
 | TODO-9.5 | Báo cáo/script đối chiếu riêng được bỏ theo yêu cầu hiện tại; xem phạm vi TODO-9.1 | — |
 | TODO-10.1 | Dockerfile multi-stage (maven build → temurin 21 JRE) cho 4 service; `sqlserver` có healthcheck `mssql-tools18/bin/sqlcmd -C` | `a9ce455` |
-| TODO-10.2 | Service `db-init` tạo 3 database; các service `depends_on: service_completed_successfully` | `0e2d199`, `b75edf3` |
+| TODO-10.2 | Service `db-init` tạo 3 database; các service `depends_on: service_completed_successfully` | `b75edf3` |
 | TODO-10.3 | Truyền biến môi trường: `DB_*`, `JWT_*`, `BRAND_SERVICE_URL`, `SAGA_FAULT_INJECTION` (mặc định `true`) | `2159f48` |
