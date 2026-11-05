@@ -20,3 +20,8 @@ Thumbs.db
 
 # Bí mật: .env chứa mật khẩu DB và JWT secret -> chỉ commit .env.example
 .env
+
+# [TODO-0.2] Local tooling and raw reports may include authentication tokens.
+node_modules/
+reports/raw/
+
