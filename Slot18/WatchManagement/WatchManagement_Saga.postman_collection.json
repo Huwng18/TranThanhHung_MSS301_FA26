@@ -1,0 +1,4867 @@
+{
+  "info": {
+    "_postman_id": "cc822a41-66ca-485d-a8fd-de1904810002",
+    "name": "Watch Management - Saga proof (DE190481)",
+    "description": "[TODO-9.1] Run all folders in order with four services running, fault injection enabled and the required ten seed watches. All writes use a test-created watch; successful completion removes it. Assertions verify HTTP responses, persisted SagaLogs, snapshots and all five brand memberships after scenarios A-G. Dates use Asia/Ho_Chi_Minh. Console output records the exact saga steps. Network outage and exhausted-compensation evidence require the separate controlled failure procedure.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "accountUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "brandUrl",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "watchUrl",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "malformedToken",
+      "value": "this-is-not-a-jwt"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Asia/Ho_Chi_Minh is UTC+07:00. Postman Sandbox does not expose Intl.",
+          "const vietnam = new Date(Date.now() + 7 * 60 * 60 * 1000);",
+          "const today = `${vietnam.getUTCFullYear()}-${String(vietnam.getUTCMonth() + 1).padStart(2, '0')}-${String(vietnam.getUTCDate()).padStart(2, '0')}`; pm.variables.set('todayVN', today);",
+          "const valid = { name: 'Saga collection watch ' + pm.collectionVariables.get('runId'), categoryId: 1, brandId: 1, caseMaterial: 'Stainless Steel', strapMaterial: 'Leather', waterpMaterial: '100 meters', price: 100, releaseDate: today, stock: 5 };",
+          "pm.variables.set('validWatchBody', JSON.stringify(valid)); pm.variables.set('requestBody', JSON.stringify(valid));"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('HTTP status matches the expected result', () => pm.response.to.have.status(Number(pm.variables.get('expectedStatus'))));",
+          "if (pm.response.code >= 200 && pm.response.code < 300) { pm.test('Successful response uses the API envelope', () => pm.expect(pm.response.json().success).to.eql(true)); }"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Login and required seed data",
+      "item": [
+        {
+          "name": "Login administrator through gateway",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);",
+                  "pm.collectionVariables.set('runId', Date.now().toString(36));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Administrator receives Bearer tokens and role 1', () => { pm.expect(body.success).to.eql(true); pm.expect(body.data.role).to.eql(1); pm.expect(body.data.tokenType).to.eql('Bearer'); pm.expect(body.data).not.to.have.property('password'); });",
+                  "pm.collectionVariables.set('adminToken', body.data.accessToken);",
+                  "pm.collectionVariables.set('adminRefreshToken', body.data.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Login administrator through gateway",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"adminsys\",\n  \"password\": \"@1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login staff through gateway",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Staff has role 2', () => pm.expect(body.data.role).to.eql(2));",
+                  "pm.collectionVariables.set('staffToken', body.data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Login staff through gateway",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"staff02\",\n  \"password\": \"@1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Account service direct login on port 8081",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Direct account service issues valid token envelope', () => pm.expect(body.data.accessToken).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{accountUrl}}/api/auth/login",
+            "description": "Account service direct login on port 8081",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"adminsys\",\n  \"password\": \"@1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Watch service direct public list on port 8083",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('The ten required watch rows exist', () => pm.expect(body.data).to.have.length(10));",
+                  "pm.collectionVariables.set('seedWatches', JSON.stringify(body.data));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{watchUrl}}/api/watches",
+            "description": "Watch service direct public list on port 8083"
+          }
+        },
+        {
+          "name": "Brand service direct list on port 8082",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Exact five brands and initial counts', () => { pm.expect(body.data.map(b => b.brandName)).to.eql(['Rolex','Omega','Seiko','Casio','TAG Heuer']); pm.expect(body.data.map(b => b.watchCount)).to.eql([2,2,2,3,1]); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{brandUrl}}/api/brands",
+            "description": "Brand service direct list on port 8082"
+          }
+        },
+        {
+          "name": "Initial data: inspect DBWatch view",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('currentWatches', JSON.stringify(body.data));",
+                  "pm.test('Watch IDs are newest first', () => { const ids = body.data.map(w => w.watchId); pm.expect(ids).to.eql([...ids].sort((a,b) => b-a)); });",
+                  "pm.test('Every watch contains its category name', () => body.data.forEach(w => pm.expect(w.categoryName).to.be.a('string').and.not.empty));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Initial data: inspect DBWatch view"
+          }
+        },
+        {
+          "name": "Initial data: reconcile brand 1 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 1).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/1/watches",
+            "description": "Initial data: reconcile brand 1 against DBWatch"
+          }
+        },
+        {
+          "name": "Initial data: reconcile brand 2 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 2).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/2/watches",
+            "description": "Initial data: reconcile brand 2 against DBWatch"
+          }
+        },
+        {
+          "name": "Initial data: reconcile brand 3 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 3).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/3/watches",
+            "description": "Initial data: reconcile brand 3 against DBWatch"
+          }
+        },
+        {
+          "name": "Initial data: reconcile brand 4 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 4).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/4/watches",
+            "description": "Initial data: reconcile brand 4 against DBWatch"
+          }
+        },
+        {
+          "name": "Initial data: reconcile brand 5 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 5).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/5/watches",
+            "description": "Initial data: reconcile brand 5 against DBWatch"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Authentication and authorization",
+      "item": [
+        {
+          "name": "Wrong password returns 401",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 401);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Wrong password returns 401",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"adminsys\",\n  \"password\": \"wrong\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Inactive member returns 403",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 403);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Inactive member returns 403",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"member02\",\n  \"password\": \"@1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Inactive staff returns 403",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 403);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Inactive staff returns 403",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"staff01\",\n  \"password\": \"@1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing credentials return 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Missing credentials return 400",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Public GET watches requires no token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Public GET watches requires no token"
+          }
+        },
+        {
+          "name": "Protected brands require token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 401);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/brands",
+            "description": "Protected brands require token"
+          }
+        },
+        {
+          "name": "Missing bearer token cannot create with spoofed role",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 401);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Role",
+                "value": "1"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "1"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing bearer token cannot create with spoofed role",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Invalid JWT signature is rejected",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 401);",
+                  "const parts = pm.collectionVariables.get('adminToken').split('.'); parts[2] = (parts[2][0] === 'a' ? 'b' : 'a') + parts[2].slice(1); pm.collectionVariables.set('forgedToken', parts.join('.'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{forgedToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands",
+            "description": "Invalid JWT signature is rejected"
+          }
+        },
+        {
+          "name": "Malformed bearer token is rejected",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 401);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{malformedToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands",
+            "description": "Malformed bearer token is rejected"
+          }
+        },
+        {
+          "name": "Refresh token cannot authorize protected requests",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 401);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminRefreshToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands",
+            "description": "Refresh token cannot authorize protected requests"
+          }
+        },
+        {
+          "name": "Access token cannot be used as refresh token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 401);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "description": "Access token cannot be used as refresh token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{adminToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing refresh token is a validation error",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "description": "Missing refresh token is a validation error",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Valid refresh issues new access token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Refresh retains administrator identity', () => { pm.expect(body.data.username).to.eql('adminsys'); pm.expect(body.data.role).to.eql(1); });",
+                  "pm.collectionVariables.set('adminToken', body.data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "description": "Valid refresh issues new access token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{adminRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Staff cannot POST even with spoofed administrator headers",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 403);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Role",
+                "value": "1"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "1"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Staff cannot POST even with spoofed administrator headers",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Staff cannot PUT even with spoofed administrator headers",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 403);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Role",
+                "value": "1"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "1"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/2147483647",
+            "description": "Staff cannot PUT even with spoofed administrator headers",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Staff cannot DELETE even with spoofed administrator headers",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 403);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              },
+              {
+                "key": "X-User-Role",
+                "value": "1"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "1"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/2147483647",
+            "description": "Staff cannot DELETE even with spoofed administrator headers"
+          }
+        },
+        {
+          "name": "Gateway does not expose internal participant API",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 404);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/internal/brands/1/watches/2147483647",
+            "description": "Gateway does not expose internal participant API"
+          }
+        },
+        {
+          "name": "Administrator token overrides forged lower role",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-User-Role",
+                "value": "3"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas?limit=1",
+            "description": "Administrator token overrides forged lower role"
+          }
+        },
+        {
+          "name": "Logout endpoint responds successfully",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/logout",
+            "description": "Logout endpoint responds successfully"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Validate every field before starting a saga",
+      "item": [
+        {
+          "name": "Capture saga list before validation failures",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('sagasBeforeValidation', JSON.stringify(body.data.map(s => s.sagaId)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas?limit=100",
+            "description": "Capture saga list before validation failures"
+          }
+        },
+        {
+          "name": "Missing name is rejected before saga creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "const payload = JSON.parse(pm.variables.get('validWatchBody')); delete payload.name; pm.variables.set('requestBody', JSON.stringify(payload));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No saga ID exists for invalid input', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing name is rejected before saga creation",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing categoryId is rejected before saga creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "const payload = JSON.parse(pm.variables.get('validWatchBody')); delete payload.categoryId; pm.variables.set('requestBody', JSON.stringify(payload));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No saga ID exists for invalid input', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing categoryId is rejected before saga creation",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing brandId is rejected before saga creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "const payload = JSON.parse(pm.variables.get('validWatchBody')); delete payload.brandId; pm.variables.set('requestBody', JSON.stringify(payload));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No saga ID exists for invalid input', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing brandId is rejected before saga creation",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing caseMaterial is rejected before saga creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "const payload = JSON.parse(pm.variables.get('validWatchBody')); delete payload.caseMaterial; pm.variables.set('requestBody', JSON.stringify(payload));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No saga ID exists for invalid input', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing caseMaterial is rejected before saga creation",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing strapMaterial is rejected before saga creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "const payload = JSON.parse(pm.variables.get('validWatchBody')); delete payload.strapMaterial; pm.variables.set('requestBody', JSON.stringify(payload));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No saga ID exists for invalid input', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing strapMaterial is rejected before saga creation",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing waterpMaterial is rejected before saga creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "const payload = JSON.parse(pm.variables.get('validWatchBody')); delete payload.waterpMaterial; pm.variables.set('requestBody', JSON.stringify(payload));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No saga ID exists for invalid input', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing waterpMaterial is rejected before saga creation",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing price is rejected before saga creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "const payload = JSON.parse(pm.variables.get('validWatchBody')); delete payload.price; pm.variables.set('requestBody', JSON.stringify(payload));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No saga ID exists for invalid input', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing price is rejected before saga creation",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing releaseDate is rejected before saga creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "const payload = JSON.parse(pm.variables.get('validWatchBody')); delete payload.releaseDate; pm.variables.set('requestBody', JSON.stringify(payload));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No saga ID exists for invalid input', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing releaseDate is rejected before saga creation",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing stock is rejected before saga creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "const payload = JSON.parse(pm.variables.get('validWatchBody')); delete payload.stock; pm.variables.set('requestBody', JSON.stringify(payload));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No saga ID exists for invalid input', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Missing stock is rejected before saga creation",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Name must exceed ten characters",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), name: '1234567890'}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Validation occurs before saga is started', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Name must exceed ten characters",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Price cannot be below 100",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), price: 99.99}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Validation occurs before saga is started', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Price cannot be below 100",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Release date must be today in Vietnam",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), releaseDate: '2000-01-01'}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Validation occurs before saga is started', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Release date must be today in Vietnam",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Category must exist",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), categoryId: 999}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Validation occurs before saga is started', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Category must exist",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Stock cannot be negative",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), stock: -1}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Validation occurs before saga is started', () => pm.expect(pm.response.headers.has('X-Saga-Id')).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Stock cannot be negative",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Invalid PUT uses the same validation rules",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), name: 'short', price: 1, releaseDate: '2000-01-01'}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/2147483647",
+            "description": "Invalid PUT uses the same validation rules",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Validation failures do not persist any saga",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga IDs are unchanged by every validation failure', () => pm.expect(body.data.map(s => s.sagaId)).to.eql(JSON.parse(pm.collectionVariables.get('sagasBeforeValidation'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas?limit=100",
+            "description": "Validation failures do not persist any saga"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - A: CREATE succeeds in both databases",
+      "item": [
+        {
+          "name": "A: create a valid watch at the price boundary",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 201);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('X-Saga-Id is returned', () => pm.expect(pm.response.headers.get('X-Saga-Id')).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('sagaId', pm.response.headers.get('X-Saga-Id'));",
+                  "pm.collectionVariables.set('newWatchId', body.data.watchId);",
+                  "pm.collectionVariables.set('watchSnapshot', JSON.stringify(body.data));",
+                  "pm.test('New watch contains complete input and joined category', () => { pm.expect(body.data.price).to.eql(100); pm.expect(body.data.releaseDate).to.eql(pm.variables.get('todayVN')); pm.expect(body.data.categoryName).to.eql('Dive Watches'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "A: create a valid watch at the price boundary",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A: inspect persisted saga and ordered steps",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga status is COMPLETED', () => pm.expect(body.data.status).to.eql('COMPLETED'));",
+                  "const expected = [\"EXECUTE CREATE_WATCH SUCCESS\",\"EXECUTE ASSIGN_BRAND SUCCESS\"];",
+                  "const actual = body.data.steps.map(s => `${s.phase} ${s.stepName} ${s.result}`);",
+                  "console.log('Saga proof', body.data.sagaId, body.data.sagaType, body.data.status, actual);",
+                  "pm.test('Persisted steps match exact transaction and compensation order', () => pm.expect(actual).to.eql(expected));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/{{sagaId}}",
+            "description": "A: inspect persisted saga and ordered steps"
+          }
+        },
+        {
+          "name": "Direct participant: repeat assignment 1 without duplicate links",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Repeated assignment is successful for the same watch and brand', () => { pm.expect(body.data.status).to.eql('ASSIGNED'); pm.expect(body.data.brandId).to.eql(1); pm.expect(body.data.watchId).to.eql(Number(pm.collectionVariables.get('newWatchId'))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{brandUrl}}/internal/brands/1/watches/{{newWatchId}}",
+            "description": "Direct participant: repeat assignment 1 without duplicate links"
+          }
+        },
+        {
+          "name": "Direct participant: repeat assignment 2 without duplicate links",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Repeated assignment is successful for the same watch and brand', () => { pm.expect(body.data.status).to.eql('ASSIGNED'); pm.expect(body.data.brandId).to.eql(1); pm.expect(body.data.watchId).to.eql(Number(pm.collectionVariables.get('newWatchId'))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{brandUrl}}/internal/brands/1/watches/{{newWatchId}}",
+            "description": "Direct participant: repeat assignment 2 without duplicate links"
+          }
+        },
+        {
+          "name": "Direct participant: unassign the test-created watch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('First unassign removes the existing link', () => pm.expect(body.data.status).to.eql('UNASSIGNED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{brandUrl}}/internal/brands/watches/{{newWatchId}}",
+            "description": "Direct participant: unassign the test-created watch"
+          }
+        },
+        {
+          "name": "Direct participant: repeated unassign is a successful no-op",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Repeated unassign returns NOTHING_TO_DO', () => pm.expect(body.data.status).to.eql('NOTHING_TO_DO'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{brandUrl}}/internal/brands/watches/{{newWatchId}}",
+            "description": "Direct participant: repeated unassign is a successful no-op"
+          }
+        },
+        {
+          "name": "Direct participant: restore test watch brand before continuing sagas",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{brandUrl}}/internal/brands/1/watches/{{newWatchId}}",
+            "description": "Direct participant: restore test watch brand before continuing sagas"
+          }
+        },
+        {
+          "name": "A: inspect DBWatch view",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('currentWatches', JSON.stringify(body.data));",
+                  "pm.test('Watch IDs are newest first', () => { const ids = body.data.map(w => w.watchId); pm.expect(ids).to.eql([...ids].sort((a,b) => b-a)); });",
+                  "pm.test('Every watch contains its category name', () => body.data.forEach(w => pm.expect(w.categoryName).to.be.a('string').and.not.empty));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "A: inspect DBWatch view"
+          }
+        },
+        {
+          "name": "A: reconcile brand 1 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 1).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/1/watches",
+            "description": "A: reconcile brand 1 against DBWatch"
+          }
+        },
+        {
+          "name": "A: reconcile brand 2 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 2).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/2/watches",
+            "description": "A: reconcile brand 2 against DBWatch"
+          }
+        },
+        {
+          "name": "A: reconcile brand 3 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 3).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/3/watches",
+            "description": "A: reconcile brand 3 against DBWatch"
+          }
+        },
+        {
+          "name": "A: reconcile brand 4 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 4).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/4/watches",
+            "description": "A: reconcile brand 4 against DBWatch"
+          }
+        },
+        {
+          "name": "A: reconcile brand 5 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 5).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/5/watches",
+            "description": "A: reconcile brand 5 against DBWatch"
+          }
+        },
+        {
+          "name": "A: newly inserted watch appears first",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('New watch is at the top of the list', () => pm.expect(body.data[0].watchId).to.eql(Number(pm.collectionVariables.get('newWatchId'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "A: newly inserted watch appears first"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - B: nonexistent brand compensates committed INSERT",
+      "item": [
+        {
+          "name": "B: brand 999 fails after local INSERT committed",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), brandId: 999}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('X-Saga-Id is returned', () => pm.expect(pm.response.headers.get('X-Saga-Id')).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('sagaId', pm.response.headers.get('X-Saga-Id'));",
+                  "pm.test('Failure contains a compensated saga and matching ID', () => { pm.expect(body.success).to.eql(false); pm.expect(body.data.sagaStatus).to.eql('COMPENSATED'); pm.expect(body.data.sagaId).to.eql(pm.collectionVariables.get('sagaId')); });",
+                  "pm.test('Failure is attributed to participant brand assignment', () => { pm.expect(body.data.failedStep).to.eql('ASSIGN_BRAND'); pm.expect(body.data.reason).to.include('404'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "B: brand 999 fails after local INSERT committed",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "B: inspect persisted saga and ordered steps",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga status is COMPENSATED', () => pm.expect(body.data.status).to.eql('COMPENSATED'));",
+                  "const expected = [\"EXECUTE CREATE_WATCH SUCCESS\",\"EXECUTE ASSIGN_BRAND FAILED\",\"COMPENSATE DELETE_WATCH SUCCESS\"];",
+                  "const actual = body.data.steps.map(s => `${s.phase} ${s.stepName} ${s.result}`);",
+                  "console.log('Saga proof', body.data.sagaId, body.data.sagaType, body.data.status, actual);",
+                  "pm.test('Persisted steps match exact transaction and compensation order', () => pm.expect(actual).to.eql(expected));",
+                  "pm.collectionVariables.set('failedWatchId', body.data.watchId);",
+                  "pm.test('A real identity value was allocated before compensation', () => pm.expect(body.data.watchId).to.be.above(Number(pm.collectionVariables.get('newWatchId'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/{{sagaId}}",
+            "description": "B: inspect persisted saga and ordered steps"
+          }
+        },
+        {
+          "name": "B: inspect DBWatch view",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('currentWatches', JSON.stringify(body.data));",
+                  "pm.test('Watch IDs are newest first', () => { const ids = body.data.map(w => w.watchId); pm.expect(ids).to.eql([...ids].sort((a,b) => b-a)); });",
+                  "pm.test('Every watch contains its category name', () => body.data.forEach(w => pm.expect(w.categoryName).to.be.a('string').and.not.empty));",
+                  "pm.test('Compensated or deleted watch is absent', () => pm.expect(body.data.some(w => w.watchId === Number(pm.collectionVariables.get('failedWatchId')))).to.eql(false));",
+                  "pm.test('All watch fields match the snapshot before failure', () => { const saved = JSON.parse(pm.collectionVariables.get('watchSnapshot')); pm.expect(body.data.find(w => w.watchId === saved.watchId)).to.eql(saved); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "B: inspect DBWatch view"
+          }
+        },
+        {
+          "name": "B: reconcile brand 1 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 1).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/1/watches",
+            "description": "B: reconcile brand 1 against DBWatch"
+          }
+        },
+        {
+          "name": "B: reconcile brand 2 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 2).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/2/watches",
+            "description": "B: reconcile brand 2 against DBWatch"
+          }
+        },
+        {
+          "name": "B: reconcile brand 3 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 3).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/3/watches",
+            "description": "B: reconcile brand 3 against DBWatch"
+          }
+        },
+        {
+          "name": "B: reconcile brand 4 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 4).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/4/watches",
+            "description": "B: reconcile brand 4 against DBWatch"
+          }
+        },
+        {
+          "name": "B: reconcile brand 5 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 5).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/5/watches",
+            "description": "B: reconcile brand 5 against DBWatch"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - C: failure after both commits compensates in LIFO order",
+      "item": [
+        {
+          "name": "C: inject failure after CREATE step 2",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 500);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('X-Saga-Id is returned', () => pm.expect(pm.response.headers.get('X-Saga-Id')).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('sagaId', pm.response.headers.get('X-Saga-Id'));",
+                  "pm.test('Failure contains a compensated saga and matching ID', () => { pm.expect(body.success).to.eql(false); pm.expect(body.data.sagaStatus).to.eql('COMPENSATED'); pm.expect(body.data.sagaId).to.eql(pm.collectionVariables.get('sagaId')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Saga-Fail-After-Step",
+                "value": "2"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "C: inject failure after CREATE step 2",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "C: inspect persisted saga and ordered steps",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga status is COMPENSATED', () => pm.expect(body.data.status).to.eql('COMPENSATED'));",
+                  "const expected = [\"EXECUTE CREATE_WATCH SUCCESS\",\"EXECUTE ASSIGN_BRAND SUCCESS\",\"FAULT FAULT_INJECTION TRIGGERED\",\"COMPENSATE UNASSIGN_BRAND SUCCESS\",\"COMPENSATE DELETE_WATCH SUCCESS\"];",
+                  "const actual = body.data.steps.map(s => `${s.phase} ${s.stepName} ${s.result}`);",
+                  "console.log('Saga proof', body.data.sagaId, body.data.sagaType, body.data.status, actual);",
+                  "pm.test('Persisted steps match exact transaction and compensation order', () => pm.expect(actual).to.eql(expected));",
+                  "pm.test('Compensated INSERT leaves a gap in the identity sequence', () => pm.expect(body.data.watchId).to.be.above(Number(pm.collectionVariables.get('failedWatchId'))));",
+                  "pm.collectionVariables.set('failedWatchId', body.data.watchId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/{{sagaId}}",
+            "description": "C: inspect persisted saga and ordered steps"
+          }
+        },
+        {
+          "name": "C: inspect DBWatch view",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('currentWatches', JSON.stringify(body.data));",
+                  "pm.test('Watch IDs are newest first', () => { const ids = body.data.map(w => w.watchId); pm.expect(ids).to.eql([...ids].sort((a,b) => b-a)); });",
+                  "pm.test('Every watch contains its category name', () => body.data.forEach(w => pm.expect(w.categoryName).to.be.a('string').and.not.empty));",
+                  "pm.test('Compensated or deleted watch is absent', () => pm.expect(body.data.some(w => w.watchId === Number(pm.collectionVariables.get('failedWatchId')))).to.eql(false));",
+                  "pm.test('All watch fields match the snapshot before failure', () => { const saved = JSON.parse(pm.collectionVariables.get('watchSnapshot')); pm.expect(body.data.find(w => w.watchId === saved.watchId)).to.eql(saved); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "C: inspect DBWatch view"
+          }
+        },
+        {
+          "name": "C: reconcile brand 1 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 1).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/1/watches",
+            "description": "C: reconcile brand 1 against DBWatch"
+          }
+        },
+        {
+          "name": "C: reconcile brand 2 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 2).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/2/watches",
+            "description": "C: reconcile brand 2 against DBWatch"
+          }
+        },
+        {
+          "name": "C: reconcile brand 3 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 3).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/3/watches",
+            "description": "C: reconcile brand 3 against DBWatch"
+          }
+        },
+        {
+          "name": "C: reconcile brand 4 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 4).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/4/watches",
+            "description": "C: reconcile brand 4 against DBWatch"
+          }
+        },
+        {
+          "name": "C: reconcile brand 5 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 5).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/5/watches",
+            "description": "C: reconcile brand 5 against DBWatch"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - UPDATE: success, snapshot restore, remote compensation",
+      "item": [
+        {
+          "name": "UPDATE succeeds and moves test watch from brand 1 to brand 2",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), name: 'Updated saga collection watch ' + pm.collectionVariables.get('runId'), categoryId: 2, brandId: 2, caseMaterial: 'Titanium', strapMaterial: 'Rubber', waterpMaterial: '200 meters', price: 222.25, stock: 17}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('X-Saga-Id is returned', () => pm.expect(pm.response.headers.get('X-Saga-Id')).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('sagaId', pm.response.headers.get('X-Saga-Id'));",
+                  "pm.collectionVariables.set('watchSnapshot', JSON.stringify(body.data));",
+                  "pm.test('Update returns the new brand and category', () => { pm.expect(body.data.brandId).to.eql(2); pm.expect(body.data.categoryName).to.eql('Chronograph Watches'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/{{newWatchId}}",
+            "description": "UPDATE succeeds and moves test watch from brand 1 to brand 2",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Successful update: inspect persisted saga and ordered steps",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga status is COMPLETED', () => pm.expect(body.data.status).to.eql('COMPLETED'));",
+                  "const expected = [\"EXECUTE UPDATE_WATCH SUCCESS\",\"EXECUTE ASSIGN_BRAND SUCCESS\"];",
+                  "const actual = body.data.steps.map(s => `${s.phase} ${s.stepName} ${s.result}`);",
+                  "console.log('Saga proof', body.data.sagaId, body.data.sagaType, body.data.status, actual);",
+                  "pm.test('Persisted steps match exact transaction and compensation order', () => pm.expect(actual).to.eql(expected));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/{{sagaId}}",
+            "description": "Successful update: inspect persisted saga and ordered steps"
+          }
+        },
+        {
+          "name": "Successful update: inspect DBWatch view",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('currentWatches', JSON.stringify(body.data));",
+                  "pm.test('Watch IDs are newest first', () => { const ids = body.data.map(w => w.watchId); pm.expect(ids).to.eql([...ids].sort((a,b) => b-a)); });",
+                  "pm.test('Every watch contains its category name', () => body.data.forEach(w => pm.expect(w.categoryName).to.be.a('string').and.not.empty));",
+                  "pm.test('All watch fields match the snapshot before failure', () => { const saved = JSON.parse(pm.collectionVariables.get('watchSnapshot')); pm.expect(body.data.find(w => w.watchId === saved.watchId)).to.eql(saved); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "Successful update: inspect DBWatch view"
+          }
+        },
+        {
+          "name": "Successful update: reconcile brand 1 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 1).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/1/watches",
+            "description": "Successful update: reconcile brand 1 against DBWatch"
+          }
+        },
+        {
+          "name": "Successful update: reconcile brand 2 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 2).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/2/watches",
+            "description": "Successful update: reconcile brand 2 against DBWatch"
+          }
+        },
+        {
+          "name": "Successful update: reconcile brand 3 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 3).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/3/watches",
+            "description": "Successful update: reconcile brand 3 against DBWatch"
+          }
+        },
+        {
+          "name": "Successful update: reconcile brand 4 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 4).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/4/watches",
+            "description": "Successful update: reconcile brand 4 against DBWatch"
+          }
+        },
+        {
+          "name": "Successful update: reconcile brand 5 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 5).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/5/watches",
+            "description": "Successful update: reconcile brand 5 against DBWatch"
+          }
+        },
+        {
+          "name": "D: updating to brand 999 restores every prior field",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), name: 'Invalid updated collection watch', brandId: 999, price: 999.99, stock: 99}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('X-Saga-Id is returned', () => pm.expect(pm.response.headers.get('X-Saga-Id')).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('sagaId', pm.response.headers.get('X-Saga-Id'));",
+                  "pm.test('Failure contains a compensated saga and matching ID', () => { pm.expect(body.success).to.eql(false); pm.expect(body.data.sagaStatus).to.eql('COMPENSATED'); pm.expect(body.data.sagaId).to.eql(pm.collectionVariables.get('sagaId')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/{{newWatchId}}",
+            "description": "D: updating to brand 999 restores every prior field",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D: inspect persisted saga and ordered steps",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga status is COMPENSATED', () => pm.expect(body.data.status).to.eql('COMPENSATED'));",
+                  "const expected = [\"EXECUTE UPDATE_WATCH SUCCESS\",\"EXECUTE ASSIGN_BRAND FAILED\",\"COMPENSATE RESTORE_WATCH SUCCESS\"];",
+                  "const actual = body.data.steps.map(s => `${s.phase} ${s.stepName} ${s.result}`);",
+                  "console.log('Saga proof', body.data.sagaId, body.data.sagaType, body.data.status, actual);",
+                  "pm.test('Persisted steps match exact transaction and compensation order', () => pm.expect(actual).to.eql(expected));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/{{sagaId}}",
+            "description": "D: inspect persisted saga and ordered steps"
+          }
+        },
+        {
+          "name": "D: inspect DBWatch view",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('currentWatches', JSON.stringify(body.data));",
+                  "pm.test('Watch IDs are newest first', () => { const ids = body.data.map(w => w.watchId); pm.expect(ids).to.eql([...ids].sort((a,b) => b-a)); });",
+                  "pm.test('Every watch contains its category name', () => body.data.forEach(w => pm.expect(w.categoryName).to.be.a('string').and.not.empty));",
+                  "pm.test('All watch fields match the snapshot before failure', () => { const saved = JSON.parse(pm.collectionVariables.get('watchSnapshot')); pm.expect(body.data.find(w => w.watchId === saved.watchId)).to.eql(saved); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "D: inspect DBWatch view"
+          }
+        },
+        {
+          "name": "D: reconcile brand 1 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 1).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/1/watches",
+            "description": "D: reconcile brand 1 against DBWatch"
+          }
+        },
+        {
+          "name": "D: reconcile brand 2 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 2).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/2/watches",
+            "description": "D: reconcile brand 2 against DBWatch"
+          }
+        },
+        {
+          "name": "D: reconcile brand 3 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 3).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/3/watches",
+            "description": "D: reconcile brand 3 against DBWatch"
+          }
+        },
+        {
+          "name": "D: reconcile brand 4 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 4).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/4/watches",
+            "description": "D: reconcile brand 4 against DBWatch"
+          }
+        },
+        {
+          "name": "D: reconcile brand 5 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 5).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/5/watches",
+            "description": "D: reconcile brand 5 against DBWatch"
+          }
+        },
+        {
+          "name": "E: inject failure after transferring test watch from brand 2 to brand 3",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 500);",
+                  "pm.variables.set('requestBody', JSON.stringify({...JSON.parse(pm.variables.get('validWatchBody')), name: 'Fault injected updated watch', brandId: 3, price: 333.33, stock: 33}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('X-Saga-Id is returned', () => pm.expect(pm.response.headers.get('X-Saga-Id')).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('sagaId', pm.response.headers.get('X-Saga-Id'));",
+                  "pm.test('Failure contains a compensated saga and matching ID', () => { pm.expect(body.success).to.eql(false); pm.expect(body.data.sagaStatus).to.eql('COMPENSATED'); pm.expect(body.data.sagaId).to.eql(pm.collectionVariables.get('sagaId')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Saga-Fail-After-Step",
+                "value": "2"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/{{newWatchId}}",
+            "description": "E: inject failure after transferring test watch from brand 2 to brand 3",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E: inspect persisted saga and ordered steps",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga status is COMPENSATED', () => pm.expect(body.data.status).to.eql('COMPENSATED'));",
+                  "const expected = [\"EXECUTE UPDATE_WATCH SUCCESS\",\"EXECUTE ASSIGN_BRAND SUCCESS\",\"FAULT FAULT_INJECTION TRIGGERED\",\"COMPENSATE ASSIGN_BRAND_BACK SUCCESS\",\"COMPENSATE RESTORE_WATCH SUCCESS\"];",
+                  "const actual = body.data.steps.map(s => `${s.phase} ${s.stepName} ${s.result}`);",
+                  "console.log('Saga proof', body.data.sagaId, body.data.sagaType, body.data.status, actual);",
+                  "pm.test('Persisted steps match exact transaction and compensation order', () => pm.expect(actual).to.eql(expected));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/{{sagaId}}",
+            "description": "E: inspect persisted saga and ordered steps"
+          }
+        },
+        {
+          "name": "E: inspect DBWatch view",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('currentWatches', JSON.stringify(body.data));",
+                  "pm.test('Watch IDs are newest first', () => { const ids = body.data.map(w => w.watchId); pm.expect(ids).to.eql([...ids].sort((a,b) => b-a)); });",
+                  "pm.test('Every watch contains its category name', () => body.data.forEach(w => pm.expect(w.categoryName).to.be.a('string').and.not.empty));",
+                  "pm.test('All watch fields match the snapshot before failure', () => { const saved = JSON.parse(pm.collectionVariables.get('watchSnapshot')); pm.expect(body.data.find(w => w.watchId === saved.watchId)).to.eql(saved); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "E: inspect DBWatch view"
+          }
+        },
+        {
+          "name": "E: reconcile brand 1 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 1).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/1/watches",
+            "description": "E: reconcile brand 1 against DBWatch"
+          }
+        },
+        {
+          "name": "E: reconcile brand 2 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 2).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/2/watches",
+            "description": "E: reconcile brand 2 against DBWatch"
+          }
+        },
+        {
+          "name": "E: reconcile brand 3 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 3).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/3/watches",
+            "description": "E: reconcile brand 3 against DBWatch"
+          }
+        },
+        {
+          "name": "E: reconcile brand 4 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 4).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/4/watches",
+            "description": "E: reconcile brand 4 against DBWatch"
+          }
+        },
+        {
+          "name": "E: reconcile brand 5 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 5).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/5/watches",
+            "description": "E: reconcile brand 5 against DBWatch"
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - DELETE: remote compensation and irreversible pivot",
+      "item": [
+        {
+          "name": "F: inject failure after removing the brand link",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 500);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('X-Saga-Id is returned', () => pm.expect(pm.response.headers.get('X-Saga-Id')).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('sagaId', pm.response.headers.get('X-Saga-Id'));",
+                  "pm.test('Failure contains a compensated saga and matching ID', () => { pm.expect(body.success).to.eql(false); pm.expect(body.data.sagaStatus).to.eql('COMPENSATED'); pm.expect(body.data.sagaId).to.eql(pm.collectionVariables.get('sagaId')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-Saga-Fail-After-Step",
+                "value": "1"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/{{newWatchId}}",
+            "description": "F: inject failure after removing the brand link"
+          }
+        },
+        {
+          "name": "F: inspect persisted saga and ordered steps",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga status is COMPENSATED', () => pm.expect(body.data.status).to.eql('COMPENSATED'));",
+                  "const expected = [\"EXECUTE UNASSIGN_BRAND SUCCESS\",\"FAULT FAULT_INJECTION TRIGGERED\",\"COMPENSATE ASSIGN_BRAND_BACK SUCCESS\"];",
+                  "const actual = body.data.steps.map(s => `${s.phase} ${s.stepName} ${s.result}`);",
+                  "console.log('Saga proof', body.data.sagaId, body.data.sagaType, body.data.status, actual);",
+                  "pm.test('Persisted steps match exact transaction and compensation order', () => pm.expect(actual).to.eql(expected));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/{{sagaId}}",
+            "description": "F: inspect persisted saga and ordered steps"
+          }
+        },
+        {
+          "name": "F: inspect DBWatch view",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('currentWatches', JSON.stringify(body.data));",
+                  "pm.test('Watch IDs are newest first', () => { const ids = body.data.map(w => w.watchId); pm.expect(ids).to.eql([...ids].sort((a,b) => b-a)); });",
+                  "pm.test('Every watch contains its category name', () => body.data.forEach(w => pm.expect(w.categoryName).to.be.a('string').and.not.empty));",
+                  "pm.test('All watch fields match the snapshot before failure', () => { const saved = JSON.parse(pm.collectionVariables.get('watchSnapshot')); pm.expect(body.data.find(w => w.watchId === saved.watchId)).to.eql(saved); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "F: inspect DBWatch view"
+          }
+        },
+        {
+          "name": "F: reconcile brand 1 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 1).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/1/watches",
+            "description": "F: reconcile brand 1 against DBWatch"
+          }
+        },
+        {
+          "name": "F: reconcile brand 2 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 2).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/2/watches",
+            "description": "F: reconcile brand 2 against DBWatch"
+          }
+        },
+        {
+          "name": "F: reconcile brand 3 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 3).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/3/watches",
+            "description": "F: reconcile brand 3 against DBWatch"
+          }
+        },
+        {
+          "name": "F: reconcile brand 4 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 4).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/4/watches",
+            "description": "F: reconcile brand 4 against DBWatch"
+          }
+        },
+        {
+          "name": "F: reconcile brand 5 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 5).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/5/watches",
+            "description": "F: reconcile brand 5 against DBWatch"
+          }
+        },
+        {
+          "name": "G: fault after DELETE pivot is skipped and deletion completes",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('X-Saga-Id is returned', () => pm.expect(pm.response.headers.get('X-Saga-Id')).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('sagaId', pm.response.headers.get('X-Saga-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-Saga-Fail-After-Step",
+                "value": "2"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/{{newWatchId}}",
+            "description": "G: fault after DELETE pivot is skipped and deletion completes"
+          }
+        },
+        {
+          "name": "G: inspect persisted saga and ordered steps",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga status is COMPLETED', () => pm.expect(body.data.status).to.eql('COMPLETED'));",
+                  "const expected = [\"EXECUTE UNASSIGN_BRAND SUCCESS\",\"EXECUTE DELETE_WATCH SUCCESS\",\"FAULT FAULT_INJECTION SKIPPED\"];",
+                  "const actual = body.data.steps.map(s => `${s.phase} ${s.stepName} ${s.result}`);",
+                  "console.log('Saga proof', body.data.sagaId, body.data.sagaType, body.data.status, actual);",
+                  "pm.test('Persisted steps match exact transaction and compensation order', () => pm.expect(actual).to.eql(expected));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/{{sagaId}}",
+            "description": "G: inspect persisted saga and ordered steps"
+          }
+        },
+        {
+          "name": "G: inspect DBWatch view",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('currentWatches', JSON.stringify(body.data));",
+                  "pm.test('Watch IDs are newest first', () => { const ids = body.data.map(w => w.watchId); pm.expect(ids).to.eql([...ids].sort((a,b) => b-a)); });",
+                  "pm.test('Every watch contains its category name', () => body.data.forEach(w => pm.expect(w.categoryName).to.be.a('string').and.not.empty));",
+                  "pm.test('Compensated or deleted watch is absent', () => pm.expect(body.data.some(w => w.watchId === Number(pm.collectionVariables.get('newWatchId')))).to.eql(false));",
+                  "pm.test('All original seed rows are preserved and test watches are cleaned up', () => pm.expect(body.data).to.eql(JSON.parse(pm.collectionVariables.get('seedWatches'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/watches",
+            "description": "G: inspect DBWatch view"
+          }
+        },
+        {
+          "name": "G: reconcile brand 1 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 1).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/1/watches",
+            "description": "G: reconcile brand 1 against DBWatch"
+          }
+        },
+        {
+          "name": "G: reconcile brand 2 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 2).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/2/watches",
+            "description": "G: reconcile brand 2 against DBWatch"
+          }
+        },
+        {
+          "name": "G: reconcile brand 3 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 3).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/3/watches",
+            "description": "G: reconcile brand 3 against DBWatch"
+          }
+        },
+        {
+          "name": "G: reconcile brand 4 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 4).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/4/watches",
+            "description": "G: reconcile brand 4 against DBWatch"
+          }
+        },
+        {
+          "name": "G: reconcile brand 5 against DBWatch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const expectedIds = JSON.parse(pm.collectionVariables.get('currentWatches')).filter(w => w.brandId === 5).map(w => w.watchId).sort((a,b) => a-b);",
+                  "pm.test('No missing links, orphan links or incorrect brand IDs', () => { pm.expect([...body.data.watchIds].sort((a,b) => a-b)).to.eql(expectedIds); pm.expect(body.data.watchCount).to.eql(expectedIds.length); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/brands/5/watches",
+            "description": "G: reconcile brand 5 against DBWatch"
+          }
+        },
+        {
+          "name": "Deleting an already deleted watch returns 404",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 404);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/{{newWatchId}}",
+            "description": "Deleting an already deleted watch returns 404"
+          }
+        },
+        {
+          "name": "Updating an already deleted watch returns 404",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 404);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/watches/{{newWatchId}}",
+            "description": "Updating an already deleted watch returns 404",
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Administrative saga monitoring",
+      "item": [
+        {
+          "name": "Staff cannot list sagas",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 403);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas",
+            "description": "Staff cannot list sagas"
+          }
+        },
+        {
+          "name": "Staff cannot inspect saga detail",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 403);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/{{sagaId}}",
+            "description": "Staff cannot inspect saga detail"
+          }
+        },
+        {
+          "name": "Anonymous requests cannot inspect sagas",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 401);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/sagas",
+            "description": "Anonymous requests cannot inspect sagas"
+          }
+        },
+        {
+          "name": "Unknown saga returns 404",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 404);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": []
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas/does-not-exist",
+            "description": "Unknown saga returns 404"
+          }
+        },
+        {
+          "name": "Administrator sees persisted successful and compensated sagas",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Saga monitoring includes completed and compensated transactions', () => { pm.expect(body.data.some(s => s.status === 'COMPLETED')).to.eql(true); pm.expect(body.data.some(s => s.status === 'COMPENSATED')).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sagas?limit=100",
+            "description": "Administrator sees persisted successful and compensated sagas"
+          }
+        }
+      ]
+    }
+  ]
+}
