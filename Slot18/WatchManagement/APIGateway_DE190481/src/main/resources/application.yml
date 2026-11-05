@@ -1,10 +1,27 @@
-# [TODO-7.1, TODO-7.6: routes, circuit breakers, JWT]
+# [TODO-7.1] Gateway server WebFlux routes use downstream service URLs.
 server:
   port: 8080
 
 spring:
   application:
     name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: account-service
+              uri: ${ACCOUNT_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**
+            - id: brand-service
+              uri: ${BRAND_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/brands/**
+            - id: watch-service
+              uri: ${WATCH_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/watches/**
 
 jwt:
   secret: ${JWT_SECRET:mss301-watch-management-secret-key-2025-very-long-string}
@@ -12,3 +29,4 @@ jwt:
 logging:
   level:
     com.mss301.gateway: INFO
+
