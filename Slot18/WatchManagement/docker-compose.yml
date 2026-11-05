@@ -77,6 +77,9 @@ services:
     depends_on:
       db-init:
         condition: service_completed_successfully
+      # [TODO-8.1] Start Account, Brand, Watch, then Gateway as specified.
+      ms-account:
+        condition: service_healthy
     healthcheck:
       test: [CMD-SHELL, "bash -c 'echo > /dev/tcp/127.0.0.1/8082'"]
       interval: 5s
