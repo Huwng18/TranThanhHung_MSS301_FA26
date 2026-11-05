@@ -35,10 +35,11 @@ saga:
   fault-injection:
     enabled: ${SAGA_FAULT_INJECTION:true}
   compensation:
-    max-attempts: 3
-    backoff-ms: 1000
+    max-attempts: ${SAGA_COMPENSATION_MAX_ATTEMPTS:3}
+    backoff-ms: ${SAGA_COMPENSATION_BACKOFF_MS:1000}
 
 logging:
   level:
     com.mss301.watch.service.saga: INFO
     com.mss301.watch.client: DEBUG
+
