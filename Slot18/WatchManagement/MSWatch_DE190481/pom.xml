@@ -59,6 +59,11 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <!-- Spring Cloud 2025.1.x (Oakwood): release train dành cho Spring Boot 4.0.x / 4.1.x -->
@@ -103,3 +108,4 @@
         </plugins>
     </build>
 </project>
+
