@@ -19,5 +19,117 @@ services:
       start_period: 30s
       retries: 15
 
+  # [TODO-10.2] Idempotent initialization completes before any application starts.
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      SQLCMDPASSWORD: YourStrong@Password123
+    volumes:
+      - ./scripts/init-databases.sql:/scripts/init-databases.sql:ro
+    entrypoint:
+      - /opt/mssql-tools18/bin/sqlcmd
+      - -S
+      - sqlserver
+      - -U
+      - sa
+      - -C
+      - -b
+      - -i
+      - /scripts/init-databases.sql
+    restart: "no"
+
+  ms-account:
+    build: ./MSAccount_DE190481
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      DB_HOST: sqlserver
+      DB_PORT: "1433"
+      DB_PASSWORD: YourStrong@Password123
+      JWT_SECRET: mss301-watch-management-secret-key-2025-very-long-string
+      JWT_EXPIRATION: 900000
+      REFRESH_EXPIRATION: 604800000
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD-SHELL, "bash -c 'echo > /dev/tcp/127.0.0.1/8081'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 40s
+      retries: 24
+
+  ms-brand:
+    build: ./MSBrand_DE190481
+    ports:
+      - "127.0.0.1:8082:8082"
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      DB_HOST: sqlserver
+      DB_PORT: "1433"
+      DB_PASSWORD: YourStrong@Password123
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD-SHELL, "bash -c 'echo > /dev/tcp/127.0.0.1/8082'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 40s
+      retries: 24
+
+  ms-watch:
+    build: ./MSWatch_DE190481
+    ports:
+      - "127.0.0.1:8083:8083"
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      DB_HOST: sqlserver
+      DB_PORT: "1433"
+      DB_PASSWORD: YourStrong@Password123
+      BRAND_SERVICE_URL: http://ms-brand:8082
+      SAGA_FAULT_INJECTION: true
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      ms-brand:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "bash -c 'echo > /dev/tcp/127.0.0.1/8083'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 40s
+      retries: 24
+
+  api-gateway:
+    build: ./APIGateway_DE190481
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      JWT_SECRET: mss301-watch-management-secret-key-2025-very-long-string
+      ACCOUNT_SERVICE_URL: http://ms-account:8081
+      BRAND_SERVICE_URL: http://ms-brand:8082
+      WATCH_SERVICE_URL: http://ms-watch:8083
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      ms-account:
+        condition: service_healthy
+      ms-brand:
+        condition: service_healthy
+      ms-watch:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 20s
+      retries: 24
+
 volumes:
   sqldata:
