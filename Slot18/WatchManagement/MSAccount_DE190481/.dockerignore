@@ -1,0 +1,8 @@
+# [TODO-10.1] Keep local build output, editor files and secrets out of images.
+target/
+.git/
+.idea/
+.vscode/
+*.iml
+*.log
+.env
