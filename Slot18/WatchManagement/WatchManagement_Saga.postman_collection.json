@@ -2,29 +2,39 @@
   "info": {
     "_postman_id": "cc822a41-66ca-485d-a8fd-de1904810002",
     "name": "Watch Management - Saga proof (DE190481)",
-    "description": "[TODO-9.1] Run all folders in order with four services running, fault injection enabled and the required ten seed watches. All writes use a test-created watch; successful completion removes it. Assertions verify HTTP responses, persisted SagaLogs, snapshots and all five brand memberships after scenarios A-G. Dates use Asia/Ho_Chi_Minh. Console output records the exact saga steps. Network outage and exhausted-compensation evidence require the separate controlled failure procedure.",
+    "description": "[TODO-9.1] B? ki?m th? Postman ??c l?p cho Watch Management / DE190481.\n\nC?CH CH?Y\n1. Kh?i ??ng MSAccount (8081), MSBrand (8082), MSWatch (8083) v? API Gateway (8080), v?i SAGA_FAULT_INJECTION=true. Ng?y hi?n t?i c?a MSWatch ph?i d?ng m?i gi? Vi?t Nam (Asia/Ho_Chi_Minh).\n2. Import ch?nh file JSON n?y v?o Postman. Kh?ng c?n import Environment, JavaScript, HTML, ?nh, CSV ho?c file d? li?u n?o kh?c.\n3. Trong tab Variables c?a collection, gi? ho?c s?a baseUrl/accountUrl/brandUrl/watchUrl cho ??ng m?y ?ang ch?y. T?i kho?n seed: adminsys / @1; staff02 / @1.\n4. Ch?n collection ? Run collection, ch?n ?? c?c folder 00?08, ch?y theo th? t? m?c ??nh, m?t iteration. Collection t? ??ng nh?p, l?y access/refresh token, t?o ng?y hi?n t?i UTC+07, l?u WatchID/SagaID v? chu?n b? m?i request body.\n5. Xem Assertions/Test Results trong Runner. M? Postman Console ?? xem chu?i b??c Saga ???c in t? API /api/sagas/{id}. M?t s? request c? ? tr? 400/401/403/404/500; test v?n PASS khi status v? n?i dung ??ng v?i k?ch b?n.\n\nD? LI?U V? CH?Y L?I\nTr??c khi ch?y, hai database ph?i c? ??ng 10 watch seed v? li?n k?t 5 brand theo ??. Kh?ng c?n x?a l?ch s? Saga ?? c?. M?i thao t?c ghi ch? d?ng watch do ch?nh l?n ch?y t?o ra; khi ch?y xong th?nh c?ng, watch th? nghi?m ???c x?a v? to?n b? 10 watch seed ???c so s?nh nguy?n v?n v?i snapshot ban ??u. C? th? ch?y l?i to?n b? collection ngay sau l?n ch?y th?nh c?ng. N?u d?ng gi?a ch?ng, x?a watch th? nghi?m c?n s?t b?ng API DELETE qua Gateway v?i token admin, ho?c kh?i t?o l?i c? DBWatch v? DBBrand tr??c khi ch?y l?i.\n\nPH?M VI T? ??NG\n124 request ki?m tra Gateway v? t?ng service; ??ng nh?p, t?i kho?n inactive, refresh token, ch? k? JWT, gi? m?o role, quy?n Admin, m?i field b?t bu?c, name > 10, price >= 100, releaseDate = h?m nay, category h?p l?, CRUD, idempotency participant, snapshot restore, th? t? b? tr? LIFO, DELETE pivot v? Saga monitoring. Sau m?i k?ch b?n A?G, collection ??i chi?u to?n b? watchIds/watchCount c?a c? 5 brand v?i danh s?ch watches ?? ph?t hi?n li?n k?t thi?u, th?a ho?c sai brand.\n\nK?CH B?N H? T?NG TH? C?NG\nCollection t? ??ng gi? l?p l?i sau local commit qua X-Saga-Fail-After-Step. Vi?c t?t service, ??t breakpoint ho?c ch?y SQL c?n thao t?c tr?n m?i tr??ng b?n ngo?i Postman; ch?ng kh?ng ???c gi? nh?n l? ?? t? ??ng ki?m th? b?i file n?y. ?? th? m?t k?t n?i th?t: l?y token b?ng request login, t?t MSBrand, g?i m?t request t?o watch h?p l? v? ki?m tra HTTP 503 / COMPENSATED, r?i b?t MSBrand l?i. ?? th? compensation c?ng l?i: ??t breakpoint sau ASSIGN_BRAND c?a CREATE c? header l?i b??c 2, t?t MSBrand r?i ti?p t?c; ??c /api/sagas/{id} ?? th?y 3 l?n UNASSIGN_BRAND th?t b?i v? COMPENSATING. Kh?i ph?c MSBrand v? d?n d? li?u th? nghi?m tr??c khi ch?y l?i to?n collection.\n\nCollection ch? g?i HTTP t?i h? th?ng ?ang ch?y v? d?ng script Postman nh?ng trong JSON; kh?ng g?i Newman, Docker, Python, filesystem ho?c c?ng c? ngo?i ?? th?c hi?n c?c assertion t? ??ng.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080"
+      "value": "http://localhost:8080",
+      "type": "string",
+      "description": "API Gateway: ???ng v?o cho c?c request client."
     },
     {
       "key": "accountUrl",
-      "value": "http://localhost:8081"
+      "value": "http://localhost:8081",
+      "type": "string",
+      "description": "MSAccount: d?ng cho request ki?m th? tr?c ti?p service."
     },
     {
       "key": "brandUrl",
-      "value": "http://localhost:8082"
+      "value": "http://localhost:8082",
+      "type": "string",
+      "description": "MSBrand: d?ng cho request ki?m th? tr?c ti?p participant."
     },
     {
       "key": "watchUrl",
-      "value": "http://localhost:8083"
+      "value": "http://localhost:8083",
+      "type": "string",
+      "description": "MSWatch: d?ng cho request ki?m th? tr?c ti?p service."
     },
     {
       "key": "malformedToken",
-      "value": "this-is-not-a-jwt"
+      "value": "this-is-not-a-jwt",
+      "type": "string",
+      "description": "JWT c? ? sai ?? ki?m tra HTTP 401; kh?ng ph?i secret."
     }
   ],
   "event": [
@@ -65,6 +75,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.variables.set('expectedStatus', 200);",
+                  "['adminToken', 'adminRefreshToken', 'staffToken', 'forgedToken', 'currentWatches', 'failedWatchId', 'newWatchId', 'sagaId', 'sagasBeforeValidation', 'seedWatches', 'watchSnapshot'].forEach(key => pm.collectionVariables.unset(key));",
                   "pm.collectionVariables.set('runId', Date.now().toString(36));"
                 ]
               }
@@ -465,7 +476,8 @@
             "description": "Initial data: reconcile brand 5 against DBWatch"
           }
         }
-      ]
+      ],
+      "description": "??ng nh?p admin/staff, g?i tr?c ti?p t?ng service v? ki?m tra 10 watch seed, 5 brand, categoryName, th? t? m?i nh?t tr??c c?ng c?c li?n k?t ban ??u. T? l?u token v? snapshot ?? c?c folder ti?p theo s? d?ng."
     },
     {
       "name": "01 - Authentication and authorization",
@@ -1207,7 +1219,8 @@
             "description": "Logout endpoint responds successfully"
           }
         }
-      ]
+      ],
+      "description": "X?c th?c v? ph?n quy?n qua Gateway: sai m?t kh?u, t?i kho?n inactive, thi?u token, JWT gi?, nh?m lo?i access/refresh, refresh h?p l?, ch?ng gi? m?o X-User-Role v? kh?ng route /internal/**."
     },
     {
       "name": "02 - Validate every field before starting a saga",
@@ -2000,7 +2013,8 @@
             "description": "Validation failures do not persist any saga"
           }
         }
-      ]
+      ],
+      "description": "Ki?m tra thi?u t?ng field v? c?c r?ng bu?c name, price, releaseDate, category, stock. So s?nh SagaID tr??c/sau ?? ch?ng minh request sai kh?ng t?o Saga."
     },
     {
       "name": "03 - A: CREATE succeeds in both databases",
@@ -2485,7 +2499,8 @@
             "description": "A: newly inserted watch appears first"
           }
         }
-      ]
+      ],
+      "description": "K?ch b?n A: t?o watch h?p l? ? ng??ng gi? 100, ki?m tra c? hai local commit, participant g?n/g? l?p l?i an to?n, kh?i ph?c link v? ??i chi?u to?n b? 5 brand. Watch m?i ph?i ??ng ??u danh s?ch."
     },
     {
       "name": "04 - B: nonexistent brand compensates committed INSERT",
@@ -2797,7 +2812,8 @@
             "description": "B: reconcile brand 5 against DBWatch"
           }
         }
-      ]
+      ],
+      "description": "K?ch b?n B: brand 999 l?m ASSIGN_BRAND th?t b?i sau khi INSERT local ?? commit. Ki?m tra COMPENSATED, DELETE_WATCH v? WatchID ?? ???c c?p; c? hai database kh?ng c?n watch th? b? l?i."
     },
     {
       "name": "05 - C: failure after both commits compensates in LIFO order",
@@ -3111,7 +3127,8 @@
             "description": "C: reconcile brand 5 against DBWatch"
           }
         }
-      ]
+      ],
+      "description": "K?ch b?n C: gi? l?p l?i sau hai commit. Ki?m tra UNASSIGN_BRAND ch?y tr??c DELETE_WATCH v? tr?ng th?i COMPENSATED; ??i chi?u c? 5 brand."
     },
     {
       "name": "06 - UPDATE: success, snapshot restore, remote compensation",
@@ -4030,7 +4047,8 @@
             "description": "E: reconcile brand 5 against DBWatch"
           }
         }
-      ]
+      ],
+      "description": "UPDATE th?nh c?ng, k?ch b?n D (brand kh?ng t?n t?i) v? E (l?i sau chuy?n brand). Ki?m tra RESTORE_WATCH kh?i ph?c ??y ?? snapshot v? ASSIGN_BRAND_BACK ho?n t?c brand m?i tr??c khi kh?i ph?c local."
     },
     {
       "name": "07 - DELETE: remote compensation and irreversible pivot",
@@ -4698,7 +4716,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "K?ch b?n F: l?i sau g? brand ph?i g?n l?i brand, gi? nguy?n watch. K?ch b?n G: l?i sau DELETE pivot b? b? qua, Saga COMPLETED. X?a fixture v? so s?nh ?? 10 watch seed v?i snapshot tr??c ch?y."
     },
     {
       "name": "08 - Administrative saga monitoring",
@@ -4861,7 +4880,8 @@
             "description": "Administrator sees persisted successful and compensated sagas"
           }
         }
-      ]
+      ],
+      "description": "Ch? Admin ???c xem Saga. Ki?m tra Staff/anonymous b? ch?n, SagaID kh?ng t?n t?i tr? 404 v? l?ch s? c? c? COMPLETED l?n COMPENSATED. C?c Saga t? l?n ch?y tr??c kh?ng ?nh h??ng k?t qu?."
     }
   ]
 }

@@ -2,11 +2,7 @@
 
 Hệ thống API quản lý đồng hồ dùng Java 21, Spring Boot 4.1.1, Spring Cloud 2025.1.3, SQL Server và Saga Orchestration. Mã sinh viên: **DE190481**. Mã nguồn thuộc repository cha `TranThanhHung_MSS301_FA26`, nhánh `main`, trong thư mục `Slot18/WatchManagement`. GitHub Desktop chọn repository cha để xem lịch sử và push lên GitHub.
 
-<!-- [TODO-8.1] Startup instructions and verified local execution evidence. -->
-
-Đã kiểm chứng ngày 05/11/2026: cả 4 project build thành công, **54 test Java PASS**; Newman chạy **124 request, 341 assertion, 0 lỗi**. Kiểm thử MSBrand ngừng hoạt động, compensation hết retry và SQL đối chiếu A–G đều PASS. Sau khi reset volume Docker, collection chạy lại vẫn PASS và giữ đủ 10 watch seed.
-
-Bằng chứng nằm trong [docs/evidence](docs/evidence/postman-results.html), [báo cáo SQL](reports/sql-consistency.json), [lỗi mạng](reports/network-failure.json), [compensation thất bại](reports/compensation-failure.json) và [reset Docker](reports/docker-reset.json). Đây là ảnh/báo cáo Newman thực tế; ảnh giao diện Postman/Debugger có thể chụp riêng nếu giảng viên yêu cầu.
+<!-- [TODO-8.1] Build and startup instructions. -->
 
 | Service | Cổng | Database | Vai trò |
 |---|---:|---|---|
@@ -74,30 +70,29 @@ Các tài khoản seed dùng mật khẩu `@1`: `adminsys` (Admin), `staff02` (S
 
 Thêm/sửa watch yêu cầu đủ field, tên dài hơn 10 ký tự, giá ≥100, ngày phát hành bằng ngày hiện tại của service. Header response `X-Saga-Id` dùng để đọc `GET /api/sagas/{sagaId}`. Header request `X-Saga-Fail-After-Step: 1` hoặc `2` tạo lỗi sau bước đã commit; DELETE sau bước 2 là pivot nên lỗi giả bị bỏ qua.
 
-## Postman / Newman
+## Kiểm thử bằng Postman
 
-Import `WatchManagement_Saga.postman_collection.json` vào Postman và chạy toàn bộ folder theo thứ tự. Collection dùng chung token, WatchID và SagaID giữa các request; chạy trên dữ liệu seed sạch.
+<!-- [TODO-9.1] One self-contained collection for import and execution in Postman. -->
 
-```powershell
-.\tools\Run-Postman.ps1
-.\tools\Capture-Evidence.ps1
-```
+TODO-9 bàn giao một file [WatchManagement_Saga.postman_collection.json](WatchManagement_Saga.postman_collection.json), chứa toàn bộ request, biến, pre-request script và assertion. Bạn chỉ cần import file này vào Postman để chạy kiểm thử; collection tự đăng nhập, lấy token, tạo ngày hiện tại theo Việt Nam và truyền WatchID/SagaID giữa các request.
 
-Cần Node.js/npm để chạy Newman. Kết quả console và file trong `reports/` là bằng chứng của lần chạy thực tế; README này không thay thế báo cáo chạy. Đề bài và checklist gốc ở [`../Assignment_Readme.md`](../Assignment_Readme.md), thiết kế ở [`docs/SAGA_DESIGN.md`](docs/SAGA_DESIGN.md), giải thích transaction ở [`docs/TRANSACTIONS.md`](docs/TRANSACTIONS.md).
+1. Khởi động SQL Server và cả bốn ứng dụng; đặt `SAGA_FAULT_INJECTION=true` để chạy các kịch bản bù trừ.
+2. Đảm bảo database có đủ 10 watch seed cùng 5 brand ban đầu. Collection chỉ sửa watch kiểm thử do nó tạo, sau đó xóa watch này để giữ nguyên dữ liệu seed.
+3. Import file JSON vào Postman. Kiểm tra các collection variable bên dưới nếu ứng dụng chạy ở địa chỉ khác.
+4. Chạy toàn bộ collection theo thứ tự folder **00 → 08**. Các request dùng chung biến nên cần chạy theo đúng thứ tự, từ bước đăng nhập.
 
-Hai kịch bản lỗi hạ tầng có script Python riêng, chạy lần lượt khi toàn bộ stack Docker đã sẵn sàng. Script dùng `.env.example` giống môi trường kiểm thử; nếu đã đổi mật khẩu/secret, chỉnh tham số `COMPOSE` trong helper cho đúng env-file trước khi chạy.
+| Collection variable | Giá trị mặc định | Dùng cho |
+|---|---|---|
+| `baseUrl` | `http://localhost:8080` | API qua Gateway |
+| `accountUrl` | `http://localhost:8081` | Kiểm thử trực tiếp MSAccount |
+| `brandUrl` | `http://localhost:8082` | Kiểm thử trực tiếp MSBrand và tính idempotent |
+| `watchUrl` | `http://localhost:8083` | Kiểm thử trực tiếp MSWatch |
 
-```powershell
-python .\tools\test_failures.py
-python .\tools\test_compensation_failure.py
-python .\tools\verify_consistency.py
-```
+Các biến này đã nằm trong collection, nên không cần import thêm file environment. Kết quả assertion hiện ngay trong Postman; script cũng ghi các bước Saga ra Postman Console. Một số request cố ý gây lỗi trả 400/401/403/500 để kiểm tra validation, phân quyền và compensation; chúng đạt khi assertion xác nhận đúng kết quả mong đợi.
 
-`test_failures.py` tắt MSBrand, kiểm tra CREATE trả 503 và xóa local watch bằng compensation; DELETE trả 503 nhưng giữ watch. Script khởi động lại MSBrand và dọn fixture trong `finally`, xuất `reports/network-failure.json`.
+Collection kiểm tra đăng nhập/JWT, phân quyền, mọi field bắt buộc, CRUD, thứ tự watch mới nhất, các Saga A–G, khôi phục snapshot, pivot của DELETE và đối chiếu dữ liệu qua API của cả năm brand. Sau khi chạy thành công, có thể chạy lại collection với cùng dữ liệu seed còn nguyên.
 
-`test_compensation_failure.py` thay breakpoint Debug bằng proxy HTTP tại cổng host 18082. Một Compose override tạm ngoài repository trỏ MSWatch tới proxy; proxy chuyển PUT sang MSBrand thật, đợi transaction assign commit, tắt MSBrand rồi mới trả response. Lỗi giả sau bước 2 dẫn tới ba lần UNASSIGN thất bại và trạng thái `COMPENSATING`; local watch vẫn còn. Script phục hồi cấu hình gốc và MSBrand, kiểm tra link brand còn tồn tại, gỡ link và dọn watch thủ công; xuất `reports/compensation-failure.json`. Cần cổng 18082 trống và Docker Desktop truy cập được `host.docker.internal`; tạm tránh các thao tác ghi khác trong lúc chạy. Các báo cáo không chứa token đăng nhập. Đây là bằng chứng tự động của cùng ranh giới transaction, chưa thay thế ảnh Postman/Debugger nếu giảng viên yêu cầu ảnh giao diện.
-
-`verify_consistency.py` chạy lại A–G trên watch riêng và chạy SQL FULL OUTER JOIN hai database sau từng kịch bản; báo cáo ở `reports/sql-consistency.json`. Query dùng trong SSMS nằm ở `scripts/verify-consistency.sql`.
+Đề bài gốc ở [`../Assignment_Readme.md`](../Assignment_Readme.md), thiết kế ở [`docs/SAGA_DESIGN.md`](docs/SAGA_DESIGN.md), giải thích transaction ở [`docs/TRANSACTIONS.md`](docs/TRANSACTIONS.md). Phạm vi TODO-9 hiện tại theo yêu cầu của bạn là collection JSON; các báo cáo và công cụ tạo ảnh riêng không còn thuộc phần bàn giao.
 
 ## Giới hạn và khôi phục thủ công
 

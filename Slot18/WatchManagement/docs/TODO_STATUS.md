@@ -2,11 +2,11 @@
 
 <!-- [TODO-0.3] Index assignment work against the preserved Git history. -->
 
-Repository: `TranThanhHung_MSS301_FA26`, nhánh `main`; mã nguồn ở `Slot18/WatchManagement`. Toàn bộ 79 commit của repository Git con đã được nhập vào repository cha, giữ nội dung, tác giả, thời gian và các merge. Hash thay đổi do thêm tiền tố đường dẫn; bảng dưới đã được đổi sang hash trong repo cha. Các commit cũ được giữ nguyên. Mọi commit thường tạo trong phiên triển khai tiếp chỉ tham chiếu **một TODO**; một TODO có thể có commit triển khai và commit kiểm thử riêng. Các nhánh tính năng được merge `--no-ff`.
+Repository: `TranThanhHung_MSS301_FA26`, nhánh `main`; mã nguồn ở `Slot18/WatchManagement`. Tác giả commit của Slot18 được thống nhất thành `Huwng18 <hungthanh18122005@gmail.com>`. Lịch sử giữ riêng từng thay đổi TODO; một TODO có thể có commit triển khai và commit kiểm thử riêng. Các nhánh tính năng được merge `--no-ff`.
 
-Đã kiểm chứng: 4 project build; 54 test Java PASS; 124 request / 341 assertion Newman PASS; outage, compensation dừng sau 3 lần retry, SQL đối chiếu A–G và reset Docker đều PASS. Bằng chứng trong [README](../README.md), `docs/evidence/` và `reports/`.
+Theo yêu cầu hiện tại của bạn, **TODO-9 chỉ bàn giao một file [WatchManagement_Saga.postman_collection.json](../WatchManagement_Saga.postman_collection.json)** có đầy đủ request, biến và script kiểm thử để import vào Postman. Các yêu cầu báo cáo/ảnh/script riêng thuộc TODO-9.2–9.5 trong tài liệu gốc được thay bằng phạm vi này. Hướng dẫn chạy collection nằm trong [README](../README.md).
 
-TODO-9.2 có 5 ảnh Newman thực tế. Ảnh giao diện Postman/Debugger cụ thể có thể chụp riêng nếu giảng viên yêu cầu. Các giới hạn về read timeout và recovery đã ghi trong README; không coi đây là workflow engine production.
+Các giới hạn về read timeout và recovery của Saga được ghi trong README.
 
 | TODO | Yêu cầu | Commit tham chiếu (mới nhất trước) |
 |---|---|---|
@@ -59,10 +59,10 @@ TODO-9.2 có 5 ảnh Newman thực tế. Ảnh giao diện Postman/Debugger cụ
 | TODO-8.1 | Chạy đúng thứ tự MSAccount → MSBrand → MSWatch → APIGateway | `09e8b45` |
 | TODO-8.2 | Smoke test qua Gateway: login, list watches, list brands | `978df09` |
 | TODO-9.1 | Import và chạy Postman collection theo thứ tự; tất cả test **PASS** | `1519e4c` |
-| TODO-9.2 | Chụp màn hình *Run results* + Console của folder 04, 05, 06, 07 | `0fa9f0c` |
-| TODO-9.3 | Kịch bản thủ công: tắt MSBrand (mục 6.3) | `dbe9efb` |
-| TODO-9.4 | Kịch bản nâng cao: compensation thất bại → `COMPENSATING` (mục 6.4) | `111e0b7` |
-| TODO-9.5 | Chạy query đối chiếu chéo sau mỗi kịch bản → 0 dòng | `45d83c4` |
+| TODO-9.2 | Báo cáo/ảnh riêng được bỏ theo yêu cầu hiện tại; xem phạm vi TODO-9.1 | — |
+| TODO-9.3 | Script lỗi hạ tầng riêng được bỏ theo yêu cầu hiện tại; xem phạm vi TODO-9.1 | — |
+| TODO-9.4 | Script compensation failure riêng được bỏ theo yêu cầu hiện tại; xem phạm vi TODO-9.1 | — |
+| TODO-9.5 | Báo cáo/script đối chiếu riêng được bỏ theo yêu cầu hiện tại; xem phạm vi TODO-9.1 | — |
 | TODO-10.1 | Dockerfile multi-stage (maven build → temurin 21 JRE) cho 4 service; `sqlserver` có healthcheck `mssql-tools18/bin/sqlcmd -C` | `6e2bc09` |
 | TODO-10.2 | Service `db-init` tạo 3 database; các service `depends_on: service_completed_successfully` | `14b80f7`, `a542e44` |
 | TODO-10.3 | Truyền biến môi trường: `DB_*`, `JWT_*`, `BRAND_SERVICE_URL`, `SAGA_FAULT_INJECTION` (mặc định `true`) | `1a9f136` |
