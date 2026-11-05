@@ -1,91 +1,91 @@
-# Imported Git history
+# Slot18 Git history
 
-<!-- [TODO-0.3] Preserve per-TODO commits in the assignment repository. -->
+<!-- [TODO-0.3] Preserve per-TODO commits and the requested author identity. -->
 
-The original nested repository was imported under `Slot18/WatchManagement` into the parent repository's `main` branch. All 79 commits, including merge parents, messages, authors and timestamps, were preserved. Commit hashes changed because each tree gained the directory prefix and the imported root gained the existing parent history.
+The nested repository was imported into `TranThanhHung_MSS301_FA26/main` under `Slot18/WatchManagement`. Its 79 original commits and merge topology were retained. As requested, the local Slot18 history now uses author and committer `Huwng18 <hungthanh18122005@gmail.com>`. Commit messages, timestamps and file trees were preserved while the identity and parent hashes changed. Earlier assignments, remote-tracking refs and the Assignment 01 `v1.0.0` tag were left unchanged.
 
-The original Git metadata, a full bundle and the pre-existing uncommitted patch are backed up locally under the parent `.git/slot18-import-*` directory. The source code, ignored local `.env` and build directories were preserved. Existing branches in the parent were preserved; imported feature branches use the `slot18/` prefix.
+The original history and removed report files remain available in local backups under the parent `.git` directory. No backup is part of the submitted source tree. TODO-9 now ships only `WatchManagement_Saga.postman_collection.json`; generated HTML, PNG, JSON reports and helper tools were removed in a separate TODO-9.1 commit.
 
-The source history is now ordinary tracked files, rather than an embedded repository or submodule. GitHub Desktop should open `TranThanhHung_MSS301_FA26`. Local commits appear in History; GitHub updates after pushing `origin/main`.
+GitHub Desktop uses the parent repository. Existing source changes remain separate per TODO; feature branches use the `slot18/` prefix. This table maps original nested commits to their current equivalents on the parent history.
 
-| Original commit | Commit in parent repository |
+| Original nested commit | Current commit (Huwng18) |
 |---|---|
-| `7cac237` | `6dae174` |
-| `d09f5f8` | `466dd6b` |
-| `25d6b97` | `22036d2` |
-| `2c1775a` | `4a2ba57` |
-| `93c91cd` | `f3556e0` |
-| `2f5d948` | `b4fa789` |
-| `b12bd58` | `9d96be5` |
-| `ac0b3dd` | `f85de6f` |
-| `f918ff2` | `a87467f` |
-| `7cc2553` | `1f59448` |
-| `bd8776e` | `74be3b8` |
-| `aad5391` | `c3fc7dd` |
-| `c994c05` | `cb5f063` |
-| `edb0ddb` | `6c889af` |
-| `d331172` | `430b7f3` |
-| `fcf0a4a` | `195c17e` |
-| `39dcfa4` | `e96f2b2` |
-| `8d94f65` | `ebc300b` |
-| `18dab55` | `75ca022` |
-| `6dcd40b` | `d443501` |
-| `99e4e34` | `4b2c61e` |
-| `d0544c9` | `1c17aef` |
-| `1a93ce3` | `a5c8f2e` |
-| `622b808` | `bdaa44d` |
-| `0644869` | `ddbe38e` |
-| `b02dd2f` | `5da6bc1` |
-| `ddc0885` | `2da706c` |
-| `1c0c039` | `657741e` |
-| `b63b4e4` | `4cb3816` |
-| `51b0c13` | `f43163f` |
-| `dc2601f` | `6c0682d` |
-| `e2fdff5` | `8c3b35c` |
-| `2d3197f` | `17f928a` |
-| `9f437e5` | `1bb932d` |
-| `3b28fbc` | `66ab63c` |
-| `c240a8b` | `0d83c77` |
-| `96b1ee0` | `0a8f976` |
-| `f892390` | `868cf66` |
-| `20890d6` | `2d77449` |
-| `4536fcc` | `e5d457b` |
-| `4736b27` | `3d15d0a` |
-| `b98aee6` | `0582598` |
-| `5d47ea7` | `0fb4a3d` |
-| `6ace9e6` | `2761f43` |
-| `68146a4` | `40e64cd` |
-| `f3d8182` | `7cc97d5` |
-| `d2fa764` | `2240084` |
-| `f70366b` | `db23664` |
-| `526067c` | `1fd845f` |
-| `ec87eb3` | `0bea6d3` |
-| `f9d1383` | `98377b7` |
-| `87cb733` | `67e5924` |
-| `4830030` | `34b248c` |
-| `a2747ce` | `ff584ef` |
-| `556741c` | `a88ccb3` |
-| `3a000e2` | `dcab156` |
-| `8e503cb` | `8a8645a` |
-| `b8db214` | `8b5bb3e` |
-| `6d94d66` | `c3f1b93` |
-| `7e12c2b` | `6c290c9` |
-| `6291a8d` | `e175365` |
-| `e47a20b` | `6e2bc09` |
-| `639129c` | `a542e44` |
-| `0f4a0bd` | `1a9f136` |
-| `743ef09` | `7c5a1a3` |
-| `d1dc989` | `d0324a1` |
-| `f6dda10` | `f4eff57` |
-| `245d3fb` | `1519e4c` |
-| `d07d859` | `0fa9f0c` |
-| `ae51581` | `dbe9efb` |
-| `defe905` | `111e0b7` |
-| `86c26a5` | `45d83c4` |
-| `5591f9c` | `89fc84c` |
-| `aa9199b` | `09e8b45` |
-| `28db825` | `978df09` |
-| `132ed6f` | `14b80f7` |
-| `2aa8dac` | `1064b2a` |
-| `d93129f` | `3a2c162` |
-| `3b90418` | `4734758` |
+| `7cac237` | `32a5e1c` |
+| `d09f5f8` | `7e40f96` |
+| `25d6b97` | `2f1ec41` |
+| `2c1775a` | `63c4e56` |
+| `93c91cd` | `5817cc7` |
+| `2f5d948` | `a95d3e8` |
+| `b12bd58` | `93223e8` |
+| `ac0b3dd` | `0c7150e` |
+| `f918ff2` | `098e822` |
+| `7cc2553` | `5c710ee` |
+| `bd8776e` | `1fc8de6` |
+| `aad5391` | `02cc41d` |
+| `c994c05` | `1337034` |
+| `edb0ddb` | `3d7cade` |
+| `d331172` | `2e7f638` |
+| `fcf0a4a` | `8298337` |
+| `39dcfa4` | `598fae4` |
+| `8d94f65` | `503deff` |
+| `18dab55` | `7fb4a67` |
+| `6dcd40b` | `fa5afdb` |
+| `99e4e34` | `600698c` |
+| `d0544c9` | `69b4147` |
+| `1a93ce3` | `6975628` |
+| `622b808` | `5bb5f24` |
+| `0644869` | `41d5497` |
+| `b02dd2f` | `ce76653` |
+| `ddc0885` | `e419fc4` |
+| `1c0c039` | `5de03b7` |
+| `b63b4e4` | `84fee6c` |
+| `51b0c13` | `6347c71` |
+| `dc2601f` | `91ffbc8` |
+| `e2fdff5` | `2198a8e` |
+| `2d3197f` | `f50d9c4` |
+| `9f437e5` | `de50bb8` |
+| `3b28fbc` | `b8889bb` |
+| `c240a8b` | `afe3ecc` |
+| `96b1ee0` | `065b070` |
+| `f892390` | `00645ee` |
+| `20890d6` | `3a0e0fe` |
+| `4536fcc` | `f8a2990` |
+| `4736b27` | `7114a65` |
+| `b98aee6` | `b1dd1a7` |
+| `5d47ea7` | `6c388b7` |
+| `6ace9e6` | `45d22cf` |
+| `68146a4` | `1efe826` |
+| `f3d8182` | `534cc6c` |
+| `d2fa764` | `a52b65c` |
+| `f70366b` | `d32f516` |
+| `526067c` | `a61601e` |
+| `ec87eb3` | `14ce3c1` |
+| `f9d1383` | `b7de5f0` |
+| `87cb733` | `24aaa74` |
+| `4830030` | `be0e783` |
+| `a2747ce` | `fcc8f68` |
+| `556741c` | `7371689` |
+| `3a000e2` | `8e95bc2` |
+| `8e503cb` | `15e413d` |
+| `b8db214` | `1f78ed8` |
+| `6d94d66` | `39155e4` |
+| `7e12c2b` | `0546931` |
+| `6291a8d` | `4f7fbce` |
+| `e47a20b` | `a9ce455` |
+| `639129c` | `b75edf3` |
+| `0f4a0bd` | `2159f48` |
+| `743ef09` | `33bb8a8` |
+| `d1dc989` | `f49f4b9` |
+| `f6dda10` | `c59e5a4` |
+| `245d3fb` | `89b5906` |
+| `d07d859` | `7ba47ad` |
+| `ae51581` | `23012d6` |
+| `defe905` | `4714ccd` |
+| `86c26a5` | `72cf4f9` |
+| `5591f9c` | `07ed58b` |
+| `aa9199b` | `c733058` |
+| `28db825` | `b9d18ff` |
+| `132ed6f` | `0e2d199` |
+| `2aa8dac` | `339a09c` |
+| `d93129f` | `fec78f8` |
+| `3b90418` | `0905850` |
