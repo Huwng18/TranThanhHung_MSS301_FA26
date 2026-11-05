@@ -38,4 +38,18 @@ public class BrandService {
         return new AssignmentResponse(watchId, brandId, previous, "ASSIGNED");
     }
 
+    // [TODO-5.3] Retrying an already completed compensation is a successful no-op.
+    @Transactional
+    public AssignmentResponse unassignWatch(Integer watchId) {
+        var existing = brandWatchRepository.findByWatchId(watchId);
+        if (existing.isEmpty()) {
+            log.info("[SAGA-PARTICIPANT] UNASSIGN watch={} -> nothing to do", watchId);
+            return new AssignmentResponse(watchId, null, null, "NOTHING_TO_DO");
+        }
+        Integer previous = existing.get().getBrandId();
+        brandWatchRepository.delete(existing.get());
+        log.info("[SAGA-PARTICIPANT] UNASSIGN watch={} from brand={}", watchId, previous);
+        return new AssignmentResponse(watchId, null, previous, "UNASSIGNED");
+    }
+
 }
