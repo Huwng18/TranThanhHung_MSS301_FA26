@@ -56,6 +56,18 @@ resilience4j:
         base-config: default
       watchCB:
         base-config: default
+  timelimiter:
+    configs:
+      default:
+        # [TODO-7.6] Allow Saga compensation retries to finish before fallback.
+        timeout-duration: 15s
+    instances:
+      accountCB:
+        base-config: default
+      brandCB:
+        base-config: default
+      watchCB:
+        base-config: default
 
 logging:
   level:
