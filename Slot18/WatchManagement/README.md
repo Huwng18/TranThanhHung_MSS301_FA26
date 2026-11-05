@@ -1,6 +1,6 @@
 # Watch Management — MSS301 Assignment 02
 
-Hệ thống API quản lý đồng hồ dùng Java 21, Spring Boot 4.1.1, Spring Cloud 2025.1.3, SQL Server và Saga Orchestration. Mã sinh viên: **DE190481**. Repository Git của bài nằm ngay trong thư mục `WatchManagement` này.
+Hệ thống API quản lý đồng hồ dùng Java 21, Spring Boot 4.1.1, Spring Cloud 2025.1.3, SQL Server và Saga Orchestration. Mã sinh viên: **DE190481**. Mã nguồn thuộc repository cha `TranThanhHung_MSS301_FA26`, nhánh `main`, trong thư mục `Slot18/WatchManagement`. GitHub Desktop chọn repository cha để xem lịch sử và push lên GitHub.
 
 <!-- [TODO-8.1] Startup instructions and verified local execution evidence. -->
 
