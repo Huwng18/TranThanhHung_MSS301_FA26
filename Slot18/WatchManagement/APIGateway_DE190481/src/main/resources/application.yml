@@ -1,0 +1,14 @@
+# [TODO-7.1, TODO-7.6: routes, circuit breakers, JWT]
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+jwt:
+  secret: ${JWT_SECRET:mss301-watch-management-secret-key-2025-very-long-string}
+
+logging:
+  level:
+    com.mss301.gateway: INFO
