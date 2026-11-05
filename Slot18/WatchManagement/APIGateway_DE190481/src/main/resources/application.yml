@@ -14,17 +14,48 @@ spring:
               uri: ${ACCOUNT_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/api/auth/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: accountCB
+                    fallbackUri: forward:/fallback/account
             - id: brand-service
               uri: ${BRAND_SERVICE_URL:http://localhost:8082}
               predicates:
                 - Path=/api/brands/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: brandCB
+                    fallbackUri: forward:/fallback/brand
             - id: watch-service
               uri: ${WATCH_SERVICE_URL:http://localhost:8083}
               predicates:
-                - Path=/api/watches/**
+                # [TODO-7.2] Monitor Sagas through Gateway; /internal/** is never routed.
+                - Path=/api/watches/**,/api/sagas/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: watchCB
+                    fallbackUri: forward:/fallback/watch
 
 jwt:
   secret: ${JWT_SECRET:mss301-watch-management-secret-key-2025-very-long-string}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+    instances:
+      accountCB:
+        base-config: default
+      brandCB:
+        base-config: default
+      watchCB:
+        base-config: default
 
 logging:
   level:
