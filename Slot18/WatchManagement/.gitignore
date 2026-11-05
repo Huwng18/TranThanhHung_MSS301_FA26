@@ -24,4 +24,6 @@ Thumbs.db
 # [TODO-0.2] Local tooling and raw reports may include authentication tokens.
 node_modules/
 reports/raw/
+__pycache__/
+*.pyc
 
