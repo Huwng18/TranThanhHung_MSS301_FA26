@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cc822a41-66ca-485d-a8fd-de1904810002",
     "name": "Watch Management - Saga proof (DE190481)",
-    "description": "[TODO-9.1] B? ki?m th? Postman ??c l?p cho Watch Management / DE190481.\n\nC?CH CH?Y\n1. Kh?i ??ng MSAccount (8081), MSBrand (8082), MSWatch (8083) v? API Gateway (8080), v?i SAGA_FAULT_INJECTION=true. Ng?y hi?n t?i c?a MSWatch ph?i d?ng m?i gi? Vi?t Nam (Asia/Ho_Chi_Minh).\n2. Import ch?nh file JSON n?y v?o Postman. Kh?ng c?n import Environment, JavaScript, HTML, ?nh, CSV ho?c file d? li?u n?o kh?c.\n3. Trong tab Variables c?a collection, gi? ho?c s?a baseUrl/accountUrl/brandUrl/watchUrl cho ??ng m?y ?ang ch?y. T?i kho?n seed: adminsys / @1; staff02 / @1.\n4. Ch?n collection ? Run collection, ch?n ?? c?c folder 00?08, ch?y theo th? t? m?c ??nh, m?t iteration. Collection t? ??ng nh?p, l?y access/refresh token, t?o ng?y hi?n t?i UTC+07, l?u WatchID/SagaID v? chu?n b? m?i request body.\n5. Xem Assertions/Test Results trong Runner. M? Postman Console ?? xem chu?i b??c Saga ???c in t? API /api/sagas/{id}. M?t s? request c? ? tr? 400/401/403/404/500; test v?n PASS khi status v? n?i dung ??ng v?i k?ch b?n.\n\nD? LI?U V? CH?Y L?I\nTr??c khi ch?y, hai database ph?i c? ??ng 10 watch seed v? li?n k?t 5 brand theo ??. Kh?ng c?n x?a l?ch s? Saga ?? c?. M?i thao t?c ghi ch? d?ng watch do ch?nh l?n ch?y t?o ra; khi ch?y xong th?nh c?ng, watch th? nghi?m ???c x?a v? to?n b? 10 watch seed ???c so s?nh nguy?n v?n v?i snapshot ban ??u. C? th? ch?y l?i to?n b? collection ngay sau l?n ch?y th?nh c?ng. N?u d?ng gi?a ch?ng, x?a watch th? nghi?m c?n s?t b?ng API DELETE qua Gateway v?i token admin, ho?c kh?i t?o l?i c? DBWatch v? DBBrand tr??c khi ch?y l?i.\n\nPH?M VI T? ??NG\n124 request ki?m tra Gateway v? t?ng service; ??ng nh?p, t?i kho?n inactive, refresh token, ch? k? JWT, gi? m?o role, quy?n Admin, m?i field b?t bu?c, name > 10, price >= 100, releaseDate = h?m nay, category h?p l?, CRUD, idempotency participant, snapshot restore, th? t? b? tr? LIFO, DELETE pivot v? Saga monitoring. Sau m?i k?ch b?n A?G, collection ??i chi?u to?n b? watchIds/watchCount c?a c? 5 brand v?i danh s?ch watches ?? ph?t hi?n li?n k?t thi?u, th?a ho?c sai brand.\n\nK?CH B?N H? T?NG TH? C?NG\nCollection t? ??ng gi? l?p l?i sau local commit qua X-Saga-Fail-After-Step. Vi?c t?t service, ??t breakpoint ho?c ch?y SQL c?n thao t?c tr?n m?i tr??ng b?n ngo?i Postman; ch?ng kh?ng ???c gi? nh?n l? ?? t? ??ng ki?m th? b?i file n?y. ?? th? m?t k?t n?i th?t: l?y token b?ng request login, t?t MSBrand, g?i m?t request t?o watch h?p l? v? ki?m tra HTTP 503 / COMPENSATED, r?i b?t MSBrand l?i. ?? th? compensation c?ng l?i: ??t breakpoint sau ASSIGN_BRAND c?a CREATE c? header l?i b??c 2, t?t MSBrand r?i ti?p t?c; ??c /api/sagas/{id} ?? th?y 3 l?n UNASSIGN_BRAND th?t b?i v? COMPENSATING. Kh?i ph?c MSBrand v? d?n d? li?u th? nghi?m tr??c khi ch?y l?i to?n collection.\n\nCollection ch? g?i HTTP t?i h? th?ng ?ang ch?y v? d?ng script Postman nh?ng trong JSON; kh?ng g?i Newman, Docker, Python, filesystem ho?c c?ng c? ngo?i ?? th?c hi?n c?c assertion t? ??ng.",
+    "description": "[TODO-9.1] Bộ kiểm thử Postman độc lập cho Watch Management / DE190481.\n\nCÁCH CHẠY\n1. Khởi động MSAccount (8081), MSBrand (8082), MSWatch (8083) và API Gateway (8080), với SAGA_FAULT_INJECTION=true. MSWatch dùng múi giờ Việt Nam Asia/Ho_Chi_Minh.\n2. Import chính file JSON này vào Postman. Không cần import Environment, JavaScript, HTML, ảnh, CSV hoặc file dữ liệu nào khác.\n3. Trong tab Variables của collection, giữ hoặc sửa baseUrl/accountUrl/brandUrl/watchUrl theo địa chỉ các service. Tài khoản seed: adminsys / @1; staff02 / @1.\n4. Chọn collection → Run collection, chọn đủ folder 00–08, chạy theo thứ tự mặc định với một iteration. Collection tự đăng nhập, lấy access/refresh token, tạo ngày hiện tại UTC+07, lưu WatchID/SagaID và chuẩn bị request body.\n5. Xem Assertions/Test Results trong Runner. Mở Postman Console để xem chuỗi bước Saga lấy từ API /api/sagas/{id}. Một số request cố ý trả 400/401/403/404/500; test vẫn PASS khi status và nội dung đúng với kịch bản.\n\nDỮ LIỆU VÀ CHẠY LẠI\nTrước khi chạy, hai database phải có đúng 10 watch seed và liên kết 5 brand theo đề. Không cần xóa lịch sử Saga đã có. Mọi thao tác ghi chỉ dùng watch do chính lần chạy tạo ra; khi chạy xong thành công, watch thử nghiệm được xóa và toàn bộ 10 watch seed được so sánh nguyên vẹn với snapshot ban đầu. Có thể chạy lại toàn bộ collection ngay sau lần chạy thành công. Nếu dừng giữa chừng, xóa watch thử nghiệm còn sót bằng API DELETE qua Gateway với token admin, hoặc khởi tạo lại cả DBWatch và DBBrand trước khi chạy lại.\n\nPHẠM VI TỰ ĐỘNG\n124 request kiểm tra Gateway và từng service; đăng nhập, tài khoản inactive, refresh token, chữ ký JWT, giả mạo role, quyền Admin, mọi field bắt buộc, name > 10, price >= 100, releaseDate = hôm nay, category hợp lệ, CRUD, idempotency participant, snapshot restore, thứ tự bù trừ LIFO, DELETE pivot và Saga monitoring. Sau mỗi kịch bản A–G, collection đối chiếu toàn bộ watchIds/watchCount của cả 5 brand với danh sách watches để phát hiện liên kết thiếu, thừa hoặc sai brand.\n\nKỊCH BẢN HẠ TẦNG THỦ CÔNG\nCollection tự động giả lập lỗi sau local commit qua X-Saga-Fail-After-Step. Việc tắt service, đặt breakpoint hoặc chạy SQL cần thao tác trên môi trường bên ngoài Postman; file này không giả nhận đã tự động kiểm thử các thao tác đó. Để thử mất kết nối thật: lấy token bằng request login, tắt MSBrand, gửi một request tạo watch hợp lệ và kiểm tra HTTP 503 / COMPENSATED, rồi bật MSBrand lại. Để thử compensation cũng lỗi: đặt breakpoint sau ASSIGN_BRAND của CREATE có header lỗi bước 2, tắt MSBrand rồi tiếp tục; đọc /api/sagas/{id} để thấy 3 lần UNASSIGN_BRAND thất bại và COMPENSATING. Khôi phục MSBrand và dọn dữ liệu thử nghiệm trước khi chạy lại toàn collection.\n\nCollection chỉ gọi HTTP tới hệ thống đang chạy và dùng script Postman nhúng trong JSON; không gọi Newman, Docker, Python, filesystem hoặc công cụ ngoài để thực hiện các assertion tự động.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,31 +10,31 @@
       "key": "baseUrl",
       "value": "http://localhost:8080",
       "type": "string",
-      "description": "API Gateway: ???ng v?o cho c?c request client."
+      "description": "API Gateway: đường vào cho các request client."
     },
     {
       "key": "accountUrl",
       "value": "http://localhost:8081",
       "type": "string",
-      "description": "MSAccount: d?ng cho request ki?m th? tr?c ti?p service."
+      "description": "MSAccount: dùng cho request kiểm thử trực tiếp service."
     },
     {
       "key": "brandUrl",
       "value": "http://localhost:8082",
       "type": "string",
-      "description": "MSBrand: d?ng cho request ki?m th? tr?c ti?p participant."
+      "description": "MSBrand: dùng cho request kiểm thử trực tiếp participant."
     },
     {
       "key": "watchUrl",
       "value": "http://localhost:8083",
       "type": "string",
-      "description": "MSWatch: d?ng cho request ki?m th? tr?c ti?p service."
+      "description": "MSWatch: dùng cho request kiểm thử trực tiếp service."
     },
     {
       "key": "malformedToken",
       "value": "this-is-not-a-jwt",
       "type": "string",
-      "description": "JWT c? ? sai ?? ki?m tra HTTP 401; kh?ng ph?i secret."
+      "description": "JWT cố ý sai để kiểm tra HTTP 401; không phải secret."
     }
   ],
   "event": [
@@ -477,7 +477,7 @@
           }
         }
       ],
-      "description": "??ng nh?p admin/staff, g?i tr?c ti?p t?ng service v? ki?m tra 10 watch seed, 5 brand, categoryName, th? t? m?i nh?t tr??c c?ng c?c li?n k?t ban ??u. T? l?u token v? snapshot ?? c?c folder ti?p theo s? d?ng."
+      "description": "Đăng nhập admin/staff, gọi trực tiếp từng service và kiểm tra 10 watch seed, 5 brand, categoryName, thứ tự mới nhất trước cùng các liên kết ban đầu. Tự lưu token và snapshot để các folder tiếp theo sử dụng."
     },
     {
       "name": "01 - Authentication and authorization",
@@ -1220,7 +1220,7 @@
           }
         }
       ],
-      "description": "X?c th?c v? ph?n quy?n qua Gateway: sai m?t kh?u, t?i kho?n inactive, thi?u token, JWT gi?, nh?m lo?i access/refresh, refresh h?p l?, ch?ng gi? m?o X-User-Role v? kh?ng route /internal/**."
+      "description": "Xác thực và phân quyền qua Gateway: sai mật khẩu, tài khoản inactive, thiếu token, JWT giả, nhầm loại access/refresh, refresh hợp lệ, chống giả mạo X-User-Role và không route /internal/**."
     },
     {
       "name": "02 - Validate every field before starting a saga",
@@ -2014,7 +2014,7 @@
           }
         }
       ],
-      "description": "Ki?m tra thi?u t?ng field v? c?c r?ng bu?c name, price, releaseDate, category, stock. So s?nh SagaID tr??c/sau ?? ch?ng minh request sai kh?ng t?o Saga."
+      "description": "Kiểm tra thiếu từng field và các ràng buộc name, price, releaseDate, category, stock. So sánh SagaID trước/sau để chứng minh request sai không tạo Saga."
     },
     {
       "name": "03 - A: CREATE succeeds in both databases",
@@ -2500,7 +2500,7 @@
           }
         }
       ],
-      "description": "K?ch b?n A: t?o watch h?p l? ? ng??ng gi? 100, ki?m tra c? hai local commit, participant g?n/g? l?p l?i an to?n, kh?i ph?c link v? ??i chi?u to?n b? 5 brand. Watch m?i ph?i ??ng ??u danh s?ch."
+      "description": "Kịch bản A: tạo watch hợp lệ ở ngưỡng giá 100, kiểm tra cả hai local commit, participant gán/gỡ lặp lại an toàn, khôi phục link và đối chiếu toàn bộ 5 brand. Watch mới phải đứng đầu danh sách."
     },
     {
       "name": "04 - B: nonexistent brand compensates committed INSERT",
@@ -2813,7 +2813,7 @@
           }
         }
       ],
-      "description": "K?ch b?n B: brand 999 l?m ASSIGN_BRAND th?t b?i sau khi INSERT local ?? commit. Ki?m tra COMPENSATED, DELETE_WATCH v? WatchID ?? ???c c?p; c? hai database kh?ng c?n watch th? b? l?i."
+      "description": "Kịch bản B: brand 999 làm ASSIGN_BRAND thất bại sau khi INSERT local đã commit. Kiểm tra COMPENSATED, DELETE_WATCH và WatchID đã được cấp; cả hai database không còn watch thử bị lỗi."
     },
     {
       "name": "05 - C: failure after both commits compensates in LIFO order",
@@ -3128,7 +3128,7 @@
           }
         }
       ],
-      "description": "K?ch b?n C: gi? l?p l?i sau hai commit. Ki?m tra UNASSIGN_BRAND ch?y tr??c DELETE_WATCH v? tr?ng th?i COMPENSATED; ??i chi?u c? 5 brand."
+      "description": "Kịch bản C: giả lập lỗi sau hai commit. Kiểm tra UNASSIGN_BRAND chạy trước DELETE_WATCH và trạng thái COMPENSATED; đối chiếu cả 5 brand."
     },
     {
       "name": "06 - UPDATE: success, snapshot restore, remote compensation",
@@ -4048,7 +4048,7 @@
           }
         }
       ],
-      "description": "UPDATE th?nh c?ng, k?ch b?n D (brand kh?ng t?n t?i) v? E (l?i sau chuy?n brand). Ki?m tra RESTORE_WATCH kh?i ph?c ??y ?? snapshot v? ASSIGN_BRAND_BACK ho?n t?c brand m?i tr??c khi kh?i ph?c local."
+      "description": "UPDATE thành công, kịch bản D (brand không tồn tại) và E (lỗi sau chuyển brand). Kiểm tra RESTORE_WATCH khôi phục đầy đủ snapshot và ASSIGN_BRAND_BACK hoàn tác brand mới trước khi khôi phục local."
     },
     {
       "name": "07 - DELETE: remote compensation and irreversible pivot",
@@ -4717,7 +4717,7 @@
           }
         }
       ],
-      "description": "K?ch b?n F: l?i sau g? brand ph?i g?n l?i brand, gi? nguy?n watch. K?ch b?n G: l?i sau DELETE pivot b? b? qua, Saga COMPLETED. X?a fixture v? so s?nh ?? 10 watch seed v?i snapshot tr??c ch?y."
+      "description": "Kịch bản F: lỗi sau gỡ brand phải gán lại brand, giữ nguyên watch. Kịch bản G: lỗi sau DELETE pivot bị bỏ qua, Saga COMPLETED. Xóa fixture và so sánh đủ 10 watch seed với snapshot trước chạy."
     },
     {
       "name": "08 - Administrative saga monitoring",
@@ -4881,7 +4881,7 @@
           }
         }
       ],
-      "description": "Ch? Admin ???c xem Saga. Ki?m tra Staff/anonymous b? ch?n, SagaID kh?ng t?n t?i tr? 404 v? l?ch s? c? c? COMPLETED l?n COMPENSATED. C?c Saga t? l?n ch?y tr??c kh?ng ?nh h??ng k?t qu?."
+      "description": "Chỉ Admin được xem Saga. Kiểm tra Staff/anonymous bị chặn, SagaID không tồn tại trả 404 và lịch sử có cả COMPLETED lẫn COMPENSATED. Các Saga từ lần chạy trước không ảnh hưởng kết quả."
     }
   ]
 }
